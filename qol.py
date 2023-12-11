@@ -1,5 +1,5 @@
-def draw_text(win, font, text, x, y, colour=(255, 255, 255)):
-    win.blit(font.render(text, 0, colour), (x, y))
+def draw_text(win, font, text, pos: tuple, colour=(255, 255, 255)):
+    win.blit(font.render(text, 0, colour), pos)
 
 def clamp(val, min_val, max_val):
     if val < min_val:
