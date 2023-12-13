@@ -15,7 +15,7 @@ class Node:
 
 class AStar:
     @staticmethod
-    def find_path(grid: dict, start_pos: tuple, end_pos: tuple, prn, old_path=None) -> list:
+    def find_path(grid: list, start_pos: list, end_pos: list, prn, old_path=None) -> list:
         end_x, end_y = end_pos
 
         deactivated_nodes = []
@@ -49,8 +49,8 @@ class AStar:
             temp_node = Node(x=x, y=y, g_cost=g_cost, h_cost=h_cost, f_cost=f_cost, parent=parent)
             return temp_node
 
-        def can_travel_check(x1: int, y1: int, x2: int, y2: int) -> bool:
-            if [x2, y2] in grid[y1][x1].tile_connections:
+        def can_travel_check(pos1: list, pos2: list) -> bool:
+            if pos2 in grid[pos1[1]][pos1[0]].tile_connections:
                 return 1
             return 0
 
@@ -61,48 +61,46 @@ class AStar:
             [-1, 0]
         ]
 
-        nodes = [[None for _ in range(len(grid[0]))] for _ in range(len(grid))]
+        nodes = [[Node for _ in range(len(grid[0]))] for _ in range(len(grid))]
         to_check_list = [start_pos]
         checked_list = []
-        nodes[start_pos] = generate_node(start_pos)
+        nodes[start_pos[1]][start_pos[0]] = generate_node(start_pos)
 
         path_found = 0
         while not path_found and len(to_check_list) > 0:
             to_check = to_check_list[0]
             for node in to_check_list:
-                if nodes[node].f_cost < nodes[to_check].f_cost:
+                if nodes[node[1]][node[0]].f_cost < nodes[to_check[1]][to_check[0]].f_cost:
                     to_check = node
 
             to_check_list.remove(to_check)
             checked_list.append(to_check)
 
             # check if current node is the end node
-            if to_check == f"{end_x}_{end_y}":
+            if to_check == end_pos:
                 path_found = 1
 
             else:
                 # check the neighbours
                 for dx, dy in neighbours:
-                    x, y = to_check.split("_")
-                    x, y = int(x), int(y)
-                    n_x, n_y = x + dx, y + dy
-                    n_node = f"{n_x}_{n_y}"
+                    n_x, n_y = to_check[0] + dx, to_check[1] + dy
+                    n_pos = [n_x, n_y]
 
                     # check if node is accessible and not checked already
-                    if n_node not in checked_list and can_travel_check(x, y, to_check, n_x, n_y, n_node):
+                    if n_pos not in checked_list and can_travel_check(to_check, n_pos):
 
-                        new_node = generate_node(n_x, n_y, nodes[to_check])
-                        if n_node not in to_check_list or new_node.f_cost < nodes[n_node].f_cost:
-                            nodes[n_node] = new_node
-                            if n_node not in to_check_list:
-                                to_check_list.append(n_node)
+                        new_node = generate_node([n_x, n_y], nodes[to_check[1]][to_check[0]])
+                        if n_pos not in to_check_list or new_node.f_cost < nodes[n_y][n_x].f_cost:
+                            nodes[n_y][n_x] = new_node
+                            if n_pos not in to_check_list:
+                                to_check_list.append(n_pos)
 
         path = []
         if path_found:
             path.insert(0, to_check)
-            while nodes[to_check].parent is not None:
-                p = nodes[to_check].parent
-                to_check = f"{p.x}_{p.y}"
+            while nodes[to_check[1]][to_check[0]].parent is not None:
+                p = nodes[to_check[1]][to_check[0]].parent
+                to_check = [p.x, p.y]
                 path.insert(0, to_check)
         return path
 
