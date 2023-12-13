@@ -16,15 +16,13 @@ class Node:
 class AStar:
     @staticmethod
     def find_path(grid: dict, start_pos: tuple, end_pos: tuple, prn, old_path=None) -> list:
+        end_x, end_y = end_pos
 
         deactivated_nodes = []
         if old_path is not None and len(old_path) > 2:
             for node in old_path:
                 if prn.generate() % 20 == 0:
                     deactivated_nodes.append(node)
-
-        start_x, start_y = start_pos
-        end_x, end_y = end_pos
 
         def generate_g_cost(parent: Node = None) -> int:
             dist = 0
@@ -42,30 +40,18 @@ class AStar:
 
             return int(dist * 10)
 
-        def generate_node(x: int, y: int, parent: Node = None) -> Node:
+        def generate_node(start_pos: list, parent: Node = None) -> Node:
+            x, y = start_pos
+
             g_cost = generate_g_cost(parent)
             h_cost = generate_h_cost(x, y, end_x, end_y)
             f_cost = g_cost + h_cost
             temp_node = Node(x=x, y=y, g_cost=g_cost, h_cost=h_cost, f_cost=f_cost, parent=parent)
             return temp_node
 
-        def can_travel_check(x1: int, y1: int, pos1: str, x2: int, y2: int, pos2: str) -> bool:
-            if pos2 in grid and pos2 not in deactivated_nodes:
-                dp = x2 - x1, y2 - y1
-
-                match dp:
-                    case 0, -1:
-                        if grid[pos1].roads[0].constructed and grid[pos2].roads[2].constructed:
-                            return 1
-                    case 1, 0:
-                        if grid[pos1].roads[1].constructed and grid[pos2].roads[3].constructed:
-                            return 1
-                    case 0, 1:
-                        if grid[pos1].roads[2].constructed and grid[pos2].roads[0].constructed:
-                            return 1
-                    case -1, 0:
-                        if grid[pos1].roads[3].constructed and grid[pos2].roads[1].constructed:
-                            return 1
+        def can_travel_check(x1: int, y1: int, x2: int, y2: int) -> bool:
+            if [x2, y2] in grid[y1][x1].tile_connections:
+                return 1
             return 0
 
         neighbours = [
@@ -75,10 +61,10 @@ class AStar:
             [-1, 0]
         ]
 
-        nodes = {}
-        to_check_list = [f"{start_x}_{start_y}"]
+        nodes = [[None for _ in range(len(grid[0]))] for _ in range(len(grid))]
+        to_check_list = [start_pos]
         checked_list = []
-        nodes[f"{start_x}_{start_y}"] = generate_node(start_x, start_y)
+        nodes[start_pos] = generate_node(start_pos)
 
         path_found = 0
         while not path_found and len(to_check_list) > 0:

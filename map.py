@@ -151,6 +151,8 @@ class Map:
                 neighbouring_tiles_pos.pop(-1)
                 neighbours_road.append(0)
 
+        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections = neighbouring_tiles_pos
+
         if self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set == 1:
             match num_connections:
                 case 0:
