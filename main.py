@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
             if e.type == pygame.MOUSEBUTTONDOWN:
                 if e.button == 1:
+                    hud.check_buttons(True)
                     clicked = 1
                     if clicked_type == 0:
                         clicked_type = 1
@@ -44,6 +45,7 @@ if __name__ == '__main__':
 
             if e.type == pygame.MOUSEBUTTONUP:
                 if e.button == 1:
+                    hud.check_buttons(False)
                     clicked = 0
                     clicked_type = 0
 
@@ -51,6 +53,8 @@ if __name__ == '__main__':
                     dragging = 0
 
                 if e.button == 3:
+                    for b in hud.buttons:
+                        b.set_activation(b.deactivated)
                     clicked = 0
                     clicked_type = 0
 

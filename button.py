@@ -4,15 +4,25 @@ import screen
 
 class Button:
     def __init__(self, x: int, y: int, activated: bool = True):
+        """
+
+        :param x:
+        :param y:
+        :param activated:
+
+        pos of x and y is center of button object
+        """
+
         self.size_x = 100
         self.size_y = 160
 
-        self.font = self.font = pygame.font.Font("assets/PublicPixel-z84yD.ttf", 12)
+        self.font = pygame.font.Font("assets/PublicPixel-z84yD.ttf", 12)
 
-        self.button_center_pos = (x, y + self.size_y * 0.3)
-        self.button_radius = self.size_x * 0.8
+        self.button_center_pos = (x, y + self.size_y * 0.2)
+        self.button_radius = self.size_x * 0.4
 
-        self.draw_pos = (x - self.size_x // 2, y - self.size_y // 2)
+        self.draw_pos = x - self.size_x // 2, y - self.size_y // 2
+        self.text_pos = x, y - self.size_y * 0.3
 
         path = "assets/hud/buttons/"
         self.image_activated = pygame.transform.scale(pygame.image.load(path+"activated.png"), (self.size_x, self.size_y))
@@ -28,8 +38,8 @@ class Button:
         self.deactivated = int(not activated)
         self.pressed = 0
 
-    def check_pressed(self, clicked: bool):
-        if clicked:
+    def check_pressed(self, click: bool):
+        if click:
             x, y = pygame.mouse.get_pos()
             dx2, dy2 = (x - self.button_center_pos[0]) ** 2, (y - self.button_center_pos[1]) ** 2
             if dx2 + dy2 <= self.button_radius ** 2:
@@ -42,8 +52,10 @@ class Button:
     def set_activation(self, activated: bool):
         self.deactivated = not activated
 
-    def draw(self):
+    def draw(self, text):
         screen.WIN.blit(self.images[self.deactivated][self.pressed], self.draw_pos)
+        draw_text(screen.WIN, self.font, text, self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
+
 
 
 if __name__ == '__main__':
@@ -57,6 +69,9 @@ if __name__ == '__main__':
                 if e.button == 1:
                     b.check_pressed(True)
 
+                if e.button == 3:
+                    b.set_activation(b.deactivated)
+
             if e.type == pygame.MOUSEBUTTONUP:
                 if e.button == 1:
                     b.check_pressed(False)
@@ -64,7 +79,7 @@ if __name__ == '__main__':
         pygame.event.clear()
 
         screen.WIN.fill((52, 52, 52))
-        b.draw()
+        b.draw(["Buy", "Roads"])
 
         pygame.display.flip()
 
