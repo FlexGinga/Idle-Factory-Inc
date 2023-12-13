@@ -8,3 +8,4 @@ A-Level Computing Project by Jack Harley
 - Add cars
 - Complete map gen
 - Add cookie clicker features
+- Make start screen / different game loops
