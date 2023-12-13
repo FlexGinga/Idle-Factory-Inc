@@ -1,6 +1,7 @@
 import pygame
 import pyautogui
 
+
 def init(title: str = None, icon_path: str = None):
     pygame.init()
 

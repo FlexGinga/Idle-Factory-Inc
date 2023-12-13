@@ -2,9 +2,11 @@ from hub_spawns import HUB_SPAWNS
 from os import listdir
 from tile import Tile
 from perlin_noise import PerlinNoise2D
+from pathfinding import AStar
 import screen
 from qol import clamp
 import pygame
+
 
 class Map:
     def __init__(self):
@@ -74,7 +76,7 @@ class Map:
         mouse_before = self.screen_to_grid(pygame.mouse.get_pos())
 
         self.scale += delta * self.scale / 10
-        self.scale = clamp(self.scale, 2, 10)
+        self.scale = clamp(self.scale, 0.25, 10)
         self.scaled_tile_size = int(self.scale * self.tile_size)
         self.scaled_tile_size_half = self.scaled_tile_size // 2
         self.scale_images()
@@ -112,12 +114,25 @@ class Map:
             for x, tile in enumerate(row[x_dif: self.grid_size_x - x_dif]):
                 self.tile_grid[y + y_dif][x + x_dif] = HUB_SPAWNS[self.stage][y][x]
 
+        for y, row in enumerate(self.tile_grid[y_dif: self.grid_size_y - y_dif]):
+            for x, tile in enumerate(row[x_dif: self.grid_size_x - x_dif]):
+                if tile.tile_set == 1:
+                    neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+                    neighbouring_tiles_pos = []
+
+                    for dx, dy in neighbours:
+                        neighbouring_tiles_pos.append([x + dx, y + dy])
+                        if not (0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1):
+                            neighbouring_tiles_pos.pop(-1)
+
+                    tile.tile_connections = neighbouring_tiles_pos
+
     def create_grid(self, stage: int = 0):
         self.stage = stage
         self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
 
         self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
-        self.build_hub()
+        # self.build_hub()
 
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
@@ -126,12 +141,15 @@ class Map:
         self.stage += 1
         self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
 
+        x_dif = (self.grid_size_x - len(HUB_SPAWNS[self.stage][0])) // 2
+        y_dif = (self.grid_size_y - len(HUB_SPAWNS[self.stage])) // 2
+
         old = self.tile_grid
         self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         for y, row in enumerate(old):
             for x, tile in enumerate(row):
-                self.tile_grid[y + 1][x + 2] = tile
-        self.build_hub()
+                self.tile_grid[y + y_dif][x + x_dif] = tile
+        # self.build_hub()
 
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
@@ -207,7 +225,7 @@ class Map:
         else:
             self.hover_tile_pos = None
 
-    def draw(self):
+    def draw(self, path = None):
         top_left_tile_pos = self.screen_to_grid((0, 0))
         bottom_right_tile_pos = self.screen_to_grid((screen.WIN.get_width(), screen.WIN.get_height()))
 
@@ -217,8 +235,11 @@ class Map:
                 if -self.scaled_tile_size <= screen_x < screen.WIN.get_width() and -self.scaled_tile_size <= screen_y < screen.WIN.get_height():
                     screen.WIN.blit(self.scaled_images[tile.tile_set][tile.tile_type][tile.tile_rotation], (screen_x, screen_y))
 
-                    # val = (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2
-                    # pygame.draw.circle(screen.WIN, (255 * val, 255 * val, 255 * val), (screen_x + self.scaled_tile_size_half, screen_y + self.scaled_tile_size_half), 4)
+                    if path is not None and [x, y] in path:
+                        pygame.draw.circle(screen.WIN, (255, 50, 50), (screen_x, screen_y), 5)
+
+                    val = (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2
+                    pygame.draw.circle(screen.WIN, (255 * val, 255 * val, 255 * val), (screen_x + self.scaled_tile_size_half, screen_y + self.scaled_tile_size_half), 4)
 
         if self.hover_tile_pos is not None:
             x, y = self.grid_to_screen(self.hover_tile_pos)

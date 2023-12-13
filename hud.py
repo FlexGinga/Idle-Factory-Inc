@@ -34,9 +34,18 @@ class Hud:
         self.image_icon_roads = pygame.transform.scale(pygame.image.load(path+"icons/roads.png"), (self.icon_size, self.icon_size))
         self.image_icon_trucks = pygame.transform.scale(pygame.image.load(path+"icons/trucks.png"), (self.icon_size, self.icon_size))
 
-    def check_buttons(self, click: bool):
+    def update_buttons(self, click: bool) -> list:
+        statuses = []
         for button in self.buttons:
             button.check_pressed(click)
+            statuses.append(button.pressed and not button.deactivated)
+        return statuses
+
+    def get_button_statuses(self) -> list:
+        statuses = []
+        for button in self.buttons:
+            statuses.append(button.pressed)
+        return statuses
 
     def draw(self, time: str = "00:00:00", money: str = "0", roads: str = "0", trucks: str = "0"):
         screen.WIN.blit(self.image_background, (screen.WIN.get_width() - self.size_x, 0))

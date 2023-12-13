@@ -77,7 +77,7 @@ class AStar:
             checked_list.append(to_check)
 
             # check if current node is the end node
-            if to_check == end_pos:
+            if to_check[0] == end_pos[0] and to_check[1] == end_pos[1]:
                 path_found = 1
 
             else:
@@ -114,4 +114,3 @@ class AStar:
             old_paths += path
 
         return paths
-

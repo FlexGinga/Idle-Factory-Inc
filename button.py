@@ -57,7 +57,6 @@ class Button:
         draw_text(screen.WIN, self.font, text, self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
 
 
-
 if __name__ == '__main__':
     screen.init()
 

@@ -1,5 +1,6 @@
 import pygame
 
+
 def draw_text(win: pygame.Surface, font: pygame.font.Font, text, pos: tuple, colour=(255, 255, 255), center_x: bool = False, center_y: bool = False):
     text_surfs = []
     if type(text) == str:
@@ -23,9 +24,34 @@ def draw_text(win: pygame.Surface, font: pygame.font.Font, text, pos: tuple, col
 
         win.blit(text_surf, draw_pos)
 
+
 def clamp(val, min_val, max_val):
     if val < min_val:
         return min_val
     elif val > max_val:
         return max_val
     return val
+
+
+def seconds_to_time(seconds: int):
+    str_hours = seconds // 3600 % 24
+    if str_hours < 10:
+        str_hours = f"0{str_hours}"
+    else:
+        str_hours = str(str_hours)
+
+    str_minutes = seconds // 60 % 60
+    if str_minutes < 10:
+        str_minutes = f"0{str_minutes}"
+    else:
+        str_minutes = str(str_minutes)
+
+    str_seconds = seconds % 60
+    if str_seconds < 10:
+        str_seconds = f"0{str_seconds}"
+    else:
+        str_seconds = str(str_seconds)
+
+    print(str_hours, str_minutes, str_seconds)
+    time = str_hours + ":" + str_minutes + ":" + str_seconds
+    return time
