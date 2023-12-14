@@ -52,6 +52,5 @@ def seconds_to_time(seconds: int):
     else:
         str_seconds = str(str_seconds)
 
-    print(str_hours, str_minutes, str_seconds)
     time = str_hours + ":" + str_minutes + ":" + str_seconds
     return time

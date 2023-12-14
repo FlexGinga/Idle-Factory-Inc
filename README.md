@@ -2,7 +2,6 @@
 
 A-Level Computing Project by Jack Harley
 
-
 **To-Do**
 - Adjusted pathfinding - **COMPLETED**
 - Add cars

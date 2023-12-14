@@ -45,6 +45,9 @@ class Map:
 
         self.create_grid()
 
+        self.car = pygame.image.load("assets/cars/truck.png")
+        self.scaled_car = pygame.transform.scale(self.car, (self.scaled_tile_size / 3, self.scaled_tile_size * 2 / 3))
+
     def load_images(self):
         paths = ["assets/map/decorations/", "assets/map/road/", "assets/map/tiles/"]
         for path in paths:
@@ -139,10 +142,11 @@ class Map:
 
     def expand_grid(self):
         self.stage += 1
+        old_x, old_y = self.grid_size_x, self.grid_size_y
         self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
 
-        x_dif = (self.grid_size_x - len(HUB_SPAWNS[self.stage][0])) // 2
-        y_dif = (self.grid_size_y - len(HUB_SPAWNS[self.stage])) // 2
+        x_dif = (self.grid_size_x - old_x) // 2
+        y_dif = (self.grid_size_y - old_y) // 2
 
         old = self.tile_grid
         self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
@@ -234,6 +238,7 @@ class Map:
                 screen_x, screen_y = self.grid_to_screen((x, y))
                 if -self.scaled_tile_size <= screen_x < screen.WIN.get_width() and -self.scaled_tile_size <= screen_y < screen.WIN.get_height():
                     screen.WIN.blit(self.scaled_images[tile.tile_set][tile.tile_type][tile.tile_rotation], (screen_x, screen_y))
+                    screen.WIN.blit(self.scaled_car, (screen_x + self.scaled_tile_size_half, screen_y))
 
                     if path is not None and [x, y] in path:
                         pygame.draw.circle(screen.WIN, (255, 50, 50), (screen_x, screen_y), 5)

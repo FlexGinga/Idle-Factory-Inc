@@ -44,18 +44,22 @@ if __name__ == '__main__':
             if e.type == pygame.MOUSEBUTTONDOWN:
                 if e.button == 1:
                     button_statuses = hud.update_buttons(True)
-                    clicked = 1
-                    if clicked_type == 0:
-                        clicked_type = 1
+
+                    if pygame.mouse.get_pos()[0] < screen.WIN.get_width() - hud.size_x:
+                        clicked = 1
+                        if clicked_type == 0:
+                            clicked_type = 1
 
                 if e.button == 2:
-                    dragging = 1
-                    prev_pos = pygame.mouse.get_pos()
+                    if pygame.mouse.get_pos()[0] < screen.WIN.get_width() - hud.size_x:
+                        dragging = 1
+                        prev_pos = pygame.mouse.get_pos()
 
                 if e.button == 3:
-                    clicked = 1
-                    if clicked_type == 0:
-                        clicked_type = 2
+                    if pygame.mouse.get_pos()[0] < screen.WIN.get_width() - hud.size_x:
+                        clicked = 1
+                        if clicked_type == 0:
+                            clicked_type = 2
 
             if e.type == pygame.MOUSEBUTTONUP:
                 if e.button == 1:
@@ -99,7 +103,6 @@ if __name__ == '__main__':
 
                 if e.key == pygame.K_SPACE:
                     path = AStar.find_path(map.tile_grid, [0, 0], map.hover_tile_pos, prn)
-                    print(path)
 
         if dragging:
             current_pos = pygame.mouse.get_pos()
