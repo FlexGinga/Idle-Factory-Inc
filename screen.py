@@ -1,5 +1,6 @@
 import pygame
 import pyautogui
+import sys
 
 
 def init(title: str = None, icon_path: str = None):
@@ -12,3 +13,9 @@ def init(title: str = None, icon_path: str = None):
         pygame.display.set_caption(title)
     if icon_path is not None:
         pygame.display.set_icon(pygame.image.load(icon_path))
+
+
+def quit():
+    pygame.quit()
+    sys.exit()
+    quit()

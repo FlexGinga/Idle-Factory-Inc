@@ -52,33 +52,6 @@ class Button:
     def set_activation(self, activated: bool):
         self.deactivated = not activated
 
-    def draw(self, text):
+    def draw(self, text, price):
         screen.WIN.blit(self.images[self.deactivated][self.pressed], self.draw_pos)
-        draw_text(screen.WIN, self.font, text, self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
-
-
-if __name__ == '__main__':
-    screen.init()
-
-    b = Button(500, 500)
-
-    while 1:
-        for e in pygame.event.get():
-            if e.type == pygame.MOUSEBUTTONDOWN:
-                if e.button == 1:
-                    b.check_pressed(True)
-
-                if e.button == 3:
-                    b.set_activation(b.deactivated)
-
-            if e.type == pygame.MOUSEBUTTONUP:
-                if e.button == 1:
-                    b.check_pressed(False)
-
-        pygame.event.clear()
-
-        screen.WIN.fill((52, 52, 52))
-        b.draw(["Buy", "Roads"])
-
-        pygame.display.flip()
-
+        draw_text(screen.WIN, self.font, [text, str(price)], self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)

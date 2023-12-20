@@ -24,7 +24,7 @@ class Hud:
 
         self.buttons = [Button(self.pos[0] + self.size_x * 2 / 7, self.pos[1] + 8 * self.icon_size, False), Button(self.pos[0] + self.size_x * 5 / 7, self.pos[1] + 8 * self.icon_size, False),
                         Button(self.pos[0] + self.size_x * 2 / 7 , self.pos[1] + 13 * self.icon_size, False), Button(self.pos[0] + self.size_x * 5 / 7, self.pos[1] + 13 * self.icon_size, False), ]
-        self.buttons_text = [["Buy", "Road"], ["Buy", "Truck"], ["Buy", "Time"], ["Buy", "Land"]]
+        self.buttons_text = ["Road", "Truck", "Time", "Land"]
 
     def load_images(self):
         path = "assets/hud/"
@@ -47,7 +47,8 @@ class Hud:
             statuses.append(button.pressed)
         return statuses
 
-    def draw(self, time: str = "00:00:00", money: str = "0", roads: str = "0", trucks: str = "0"):
+    def draw(self, time: str = "00:00:00", money: str = "0", roads: str = "0", trucks: str = "0",
+             prices: list = ["", "", "", ""]):
         screen.WIN.blit(self.image_background, (screen.WIN.get_width() - self.size_x, 0))
 
         screen.WIN.blit(self.image_icon_time, (self.pos[0] + self.icon_size, self.pos[1] + self.icon_size))
@@ -60,5 +61,5 @@ class Hud:
         draw_text(screen.WIN, self.font, f"{roads}", (self.pos[0] + self.icon_size * 2.5, self.pos[1] + 4 * self.icon_size + 6), self.text_colour)
         draw_text(screen.WIN, self.font, f"{trucks}", (self.pos[0] + self.size_x // 2 + self.icon_size * 2, self.pos[1] + 4 * self.icon_size + 6), self.text_colour)
 
-        for button, text in zip(self.buttons, self.buttons_text):
-            button.draw(text)
+        for button, text, price in zip(self.buttons, self.buttons_text, prices):
+            button.draw(text, price)

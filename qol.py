@@ -11,7 +11,7 @@ def draw_text(win: pygame.Surface, font: pygame.font.Font, text, pos: tuple, col
     else:
         raise Exception("type error")
 
-    line_height = text_surfs[0].get_height()
+    line_height = text_surfs[0].get_height() + 4
     half_height = line_height * len(text_surfs) // 2
     for index, text_surf in enumerate(text_surfs):
         x_offset, y_offset = 0, 0

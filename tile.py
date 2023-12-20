@@ -9,4 +9,4 @@ class Tile:
     tile_connections: list = ()
 
     unbreakable: bool = False
-    connectable: bool = True
+    connectable: bool = False
