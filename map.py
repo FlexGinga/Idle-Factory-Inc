@@ -11,7 +11,9 @@ import pygame
 
 
 class Map:
-    def __init__(self):
+    def __init__(self, prn):
+        self.prn = prn
+
         self.grid_size_x = 0
         self.grid_size_y = 0
         self.tile_grid = []
@@ -46,9 +48,10 @@ class Map:
 
         self.stage = 0
 
-        self.noise_scale = 2.5
-        self.perlin_noise = PerlinNoise2D(234234)
+        self.noise_scale = 10
+        self.perlin_noise = PerlinNoise2D(prn.generate())
 
+        self.factories = []
         self.create_grid()
 
         self.image_car = pygame.image.load("assets/cars/truck.png")
@@ -126,7 +129,7 @@ class Map:
 
     @staticmethod
     def get_stage_size(stage):
-        return 7 + stage * 4, 5 + stage * 2
+        return 9 + stage * 4, 7 + stage * 2
 
     def build_hub(self):
         x_dif = (self.grid_size_x - len(HUB_SPAWNS[self.stage][0])) // 2
@@ -156,8 +159,32 @@ class Map:
         self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True)
 
+        self.add_factories()
+
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
+
+    def add_factories(self):
+        start_x, start_y = self.get_stage_size(0)
+        self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
+
+        x_dif = (self.grid_size_x - start_x) // 2 + 1
+        y_dif = (self.grid_size_y - start_y) // 2 + 1
+
+        x_limit_low, x_limit_high = self.grid_size_x // 2 - x_dif // 2, self.grid_size_x // 2 + x_dif // 2
+        y_limit_low, y_limit_high = self.grid_size_y // 2 - y_dif // 2, self.grid_size_y // 2 + y_dif // 2
+
+        for _ in range(self.stage + 1):
+            x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
+            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
+                x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
+
+            self.tile_grid[y][x].tile_set = 2
+            self.tile_grid[y][x].tile_type = 0
+            self.tile_grid[y][x].tile_rotation = 0
+            self.tile_grid[y][x].connectable = 1
+            self.tile_grid[y][x].unbreakable = 1
+            self.factories.append([x, y])
 
     def expand_grid(self):
         self.stage += 1
@@ -176,6 +203,8 @@ class Map:
         for effect in self.effects:
             effect.pos = effect.pos[0] + x_dif, effect.pos[1] + y_dif
 
+        self.add_factories()
+
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
 
@@ -190,12 +219,17 @@ class Map:
         neighbouring_tiles_pos = []
         neighbours_road = []
         num_connections = 0
+        junctions = []
 
         for dx, dy in neighbours:
+            junctions.append(False)
             neighbouring_tiles_pos.append([tile_pos[0] + dx, tile_pos[1] + dy])
             if 0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and (self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1 or self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].connectable):
                 neighbours_road.append(1)
                 num_connections += 1
+                if self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_type > 3:
+                    junctions.pop(-1)
+                    junctions.append(True)
             else:
                 neighbouring_tiles_pos.pop(-1)
                 neighbours_road.append(0)

@@ -1,5 +1,5 @@
-def generate_price(starting_price: int, units_bought: int):
-    return int(starting_price * 1.15 ** units_bought)
+def generate_price(starting_price: int, units_bought: int, interest_rate: float = 1.15):
+    return int(starting_price * interest_rate ** units_bought)
 
 class Prices:
     def __init__(self):
@@ -8,7 +8,7 @@ class Prices:
         self.time_bought = 0
         self.land_bought = 0
     def get_road_price(self):
-        return generate_price(15, self.roads_bought)
+        return generate_price(15, self.roads_bought, 1.10)
 
     def get_vehicle_price(self):
         return generate_price(50, self.vehicles_bought)

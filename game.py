@@ -9,19 +9,19 @@ import screen
 import pygame
 
 
-def game():
-    map = Map()
-    hud = Hud()
-
+def game(seed: str):
     prn = PseudoRandomNumber()
-    prn.set_seed("fdsf")
+    prn.set_seed(seed)
+
+    map = Map(prn)
+    hud = Hud()
 
     path = None
 
     num_trucks = 0
     num_roads_available = 0
-    time_left = 60 * 5
-    money = 0
+    time_left = 60 * 1
+    money = 50000
 
     prices = Prices()
 

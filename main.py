@@ -7,9 +7,10 @@ if __name__ == '__main__':
 
     run = 1
     while run:
-        if menu():
+        seed, close_ = menu()
+        if close_:
             run = 0
         else:
-            game()
+            game(seed)
 
     screen.quit()
