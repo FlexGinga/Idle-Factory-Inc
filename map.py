@@ -26,6 +26,9 @@ class Map:
         self.scaled_image_hover = None
         self.scaled_images_effect = []
 
+        self.image_car = None
+        self.scaled_cars = [None, None, None, None]
+
         self.image_build_mode = None
 
         self.load_images()
@@ -54,11 +57,7 @@ class Map:
         self.factories = []
         self.create_grid()
 
-        self.image_car = pygame.image.load("assets/cars/truck.png")
-        self.scaled_car = pygame.transform.scale(self.image_car, (self.scaled_tile_size / 3, self.scaled_tile_size * 2 / 3))
-
         self.cars = []
-
         self.effects = []
 
     def load_images(self):
@@ -85,6 +84,8 @@ class Map:
         self.image_hover = pygame.image.load("assets/map/hover.png").convert_alpha()
         self.image_build_mode = pygame.transform.scale(pygame.image.load("assets/map/build_mode_icon.png").convert_alpha(), (48,32))
 
+        self.image_car = pygame.image.load("assets/cars/truck.png").convert_alpha()
+
     def scale_images(self):
         size = (self.scaled_tile_size, self.scaled_tile_size)
         for i, image_set in enumerate(self.images):
@@ -96,6 +97,10 @@ class Map:
             self.scaled_images_effect[i] = pygame.transform.scale(image, size)
 
         self.scaled_image_hover = pygame.transform.scale(self.image_hover, size)
+
+        size = size[0] / 5, size[1] / 2.5
+        for i in range(4):
+            self.scaled_cars[i] = pygame.transform.rotate(pygame.transform.scale(self.image_car, size), 90 * -i)
 
     def change_scale(self, delta):
         mouse_before = self.screen_to_grid(pygame.mouse.get_pos())
@@ -209,7 +214,7 @@ class Map:
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
 
     def add_car(self):
-        self.cars.append(Car())
+        self.cars.append(Car(self.tile_grid[1][1], [1, 1], 3, 0))
 
     def add_effect(self):
         self.effects.append(Effect(pos=(self.grid_size_x // 2, self.grid_size_y // 2),length=0.25,num_stages=8))
@@ -299,6 +304,9 @@ class Map:
         else:
             self.hover_tile_pos = None
 
+        for car in self.cars:
+            car.update_relative_position(dt)
+
         for effect in self.effects:
             effect.time += dt
             effect.stage = int(effect.time / effect.length * effect.num_stages)
@@ -321,6 +329,14 @@ class Map:
 
                     # val = (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2
                     # pygame.draw.circle(screen.WIN, (255 * val, 255 * val, 255 * val), (screen_x + self.scaled_tile_size_half, screen_y + self.scaled_tile_size_half), 4)
+
+        for car in self.cars:
+            x, y = self.grid_to_screen(car.road_pos)
+
+            x += car.relative_x * self.scaled_tile_size
+            y += (1 - car.relative_y) * self.scaled_tile_size
+            img = self.scaled_cars[car.relative_direction]
+            screen.WIN.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
 
         for effect in self.effects:
             x, y = self.grid_to_screen(effect.pos)

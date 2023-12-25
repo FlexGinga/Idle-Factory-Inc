@@ -113,8 +113,9 @@ def game(seed: str):
                         tile.tile_set %= len(map.images)
 
                 if e.key == pygame.K_SPACE:
-                    if map.hover_tile_pos is not None:
-                        path = AStar.find_path(map.tile_grid, [0, 0], map.hover_tile_pos, prn)
+                    map.add_car()
+                    # if map.hover_tile_pos is not None:
+                    #     path = AStar.find_path(map.tile_grid, [0, 0], map.hover_tile_pos, prn)
 
         if dragging:
             current_pos = pygame.mouse.get_pos()
