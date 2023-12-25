@@ -5,7 +5,7 @@ A-Level Computing Project by Jack Harley
 **To-Do**
 - Adjusted pathfinding - **COMPLETED**
 - Add cars - **COMPLETED**
-- Lin pathfinding
+- Link pathfinding
 - Complete map gen - **Fix spawning in start area**
 - Add cookie clicker features
   * add clicker - **COMPLETED**
