@@ -20,8 +20,14 @@ def game(seed: str):
 
     num_trucks = 0
     num_roads_available = 0
-    time_left = 60 * 1
-    money = 50000
+    time_left = 15
+    money = 0
+
+    money_per_click = 1
+    money_per_truck = 50
+
+    total_time = 0
+    total_money = 0
 
     prices = Prices()
 
@@ -41,6 +47,7 @@ def game(seed: str):
         prev = now
 
         time_left -= dt
+        total_time += dt
 
         button_statuses = [False, False, False, False]
 
@@ -112,11 +119,6 @@ def game(seed: str):
                         tile.tile_rotation = 0
                         tile.tile_set %= len(map.images)
 
-                if e.key == pygame.K_SPACE:
-                    map.add_car()
-                    # if map.hover_tile_pos is not None:
-                    #     path = AStar.find_path(map.tile_grid, [0, 0], map.hover_tile_pos, prn)
-
         if dragging:
             current_pos = pygame.mouse.get_pos()
             map.change_offset(current_pos[0] - prev_pos[0], current_pos[1] - prev_pos[1])
@@ -128,11 +130,14 @@ def game(seed: str):
                     num_roads_available += clicked_type * 2 - 3
 
         if not build_mode and mb1 and map.check_factory_clicked():
-            money += 1
+            money += money_per_click
+            total_money += money_per_click
 
         pygame.event.clear()
 
-        map.update(dt)
+        trucks_completed = map.update(dt)
+        money += trucks_completed * money_per_truck
+        total_money += trucks_completed * money_per_truck
 
         frame_prices = prices.get_prices()
         for button, price in zip(hud.buttons, frame_prices):
@@ -148,6 +153,7 @@ def game(seed: str):
         if button_statuses[1]:
             money -= frame_prices[1]
             num_trucks += 1
+            map.add_car()
             prices.vehicles_bought += 1
         if button_statuses[2]:
             money -= frame_prices[2]
@@ -162,6 +168,8 @@ def game(seed: str):
 
         map.draw(build_mode, path)
         hud.draw(seconds_to_time(int(time_left)), str(money), str(num_roads_available), str(num_trucks),
-                 frame_prices)
+                 frame_prices, time_left)
 
         pygame.display.flip()
+
+    return total_time, total_money

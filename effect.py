@@ -4,6 +4,7 @@ from dataclasses import dataclass
 class Effect:
     pos: tuple
 
+    type: int
     length: float
     num_stages: int
 

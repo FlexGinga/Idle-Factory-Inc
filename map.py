@@ -17,13 +17,16 @@ class Map:
         self.grid_size_x = 0
         self.grid_size_y = 0
         self.tile_grid = []
+        self.factories = []
 
         self.images = []
         self.image_hover = None
+        self.image_error = None
         self.images_effect = []
 
         self.scaled_images = []
         self.scaled_image_hover = None
+        self.scaled_image_error = None
         self.scaled_images_effect = []
 
         self.image_car = None
@@ -54,10 +57,11 @@ class Map:
         self.noise_scale = 10
         self.perlin_noise = PerlinNoise2D(prn.generate())
 
-        self.factories = []
         self.create_grid()
 
         self.cars = []
+        self.cars_waiting = [[], []]
+
         self.effects = []
 
     def load_images(self):
@@ -76,15 +80,23 @@ class Map:
             self.images.append(image_set)
             self.scaled_images.append(scaled_image_set)
 
-        path = "assets/map/effect/"
-        for image in listdir(path):
-            self.images_effect.append(pygame.image.load(path + image).convert_alpha())
-            self.scaled_images_effect.append(None)
-
         self.image_hover = pygame.image.load("assets/map/hover.png").convert_alpha()
-        self.image_build_mode = pygame.transform.scale(pygame.image.load("assets/map/build_mode_icon.png").convert_alpha(), (48,32))
+        self.image_error = pygame.image.load("assets/map/error.png").convert_alpha()
+
+        path = "assets/map/effect/"
+        for effect in listdir(path):
+            effect_set = []
+            scaled_effect = []
+            for image in listdir(path + effect):
+                effect_set.append(pygame.image.load(path + effect + "/" + image).convert_alpha())
+                scaled_effect.append(None)
+            self.images_effect.append(effect_set)
+            self.scaled_images_effect.append(scaled_effect)
 
         self.image_car = pygame.image.load("assets/cars/truck.png").convert_alpha()
+
+        self.image_build_mode = pygame.transform.scale(pygame.image.load("assets/map/build_mode_icon.png").convert_alpha(), (48,32))
+
 
     def scale_images(self):
         size = (self.scaled_tile_size, self.scaled_tile_size)
@@ -93,10 +105,12 @@ class Map:
                 for k, image in enumerate(rotation_set):
                     self.scaled_images[i][j][k] = pygame.transform.scale(image, size)
 
-        for i, image in enumerate(self.images_effect):
-            self.scaled_images_effect[i] = pygame.transform.scale(image, size)
-
         self.scaled_image_hover = pygame.transform.scale(self.image_hover, size)
+        self.scaled_image_error = pygame.transform.scale(self.image_error, size)
+
+        for i, effect in enumerate(self.images_effect):
+            for j, image in enumerate(effect):
+                self.scaled_images_effect[i][j] = pygame.transform.scale(image, size)
 
         size = size[0] / 5, size[1] / 2.5
         for i in range(4):
@@ -189,7 +203,9 @@ class Map:
             self.tile_grid[y][x].tile_rotation = 0
             self.tile_grid[y][x].connectable = 1
             self.tile_grid[y][x].unbreakable = 1
-            self.factories.append([x, y])
+            self.factories.append([[x, y], 0])
+
+            self.decide_tile_type([x, y], True)
 
     def expand_grid(self):
         self.stage += 1
@@ -208,16 +224,39 @@ class Map:
         for effect in self.effects:
             effect.pos = effect.pos[0] + x_dif, effect.pos[1] + y_dif
 
+        for car in self.cars:
+            for pos in car.path:
+                pos[0] += x_dif
+                pos[1] += y_dif
+
+        for type_ in self.cars_waiting:
+            for car in type_:
+                for pos in car.path:
+                    pos[0] += x_dif
+                    pos[1] += y_dif
+
+        for factory in self.factories:
+            factory[0][0] += x_dif
+            factory[0][1] += y_dif
+
         self.add_factories()
 
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
 
-    def add_car(self):
-        self.cars.append(Car(self.tile_grid[1][1], [1, 1], 3, 0))
+    def find_least_populated_factory(self):
+        smallest_index = 0
+        for i, factory in enumerate(self.factories):
+            if factory[1] < self.factories[smallest_index][1]:
+                smallest_index = i
+        return smallest_index
 
-    def add_effect(self):
-        self.effects.append(Effect(pos=(self.grid_size_x // 2, self.grid_size_y // 2),length=0.25,num_stages=8))
+    def add_car(self):
+        self.cars.append(Car(AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], self.factories[self.find_least_populated_factory()][0], self.prn), False))
+
+    def add_effect(self, pos, type_, length):
+        num_stages = len(self.scaled_images_effect[type_])
+        self.effects.append(Effect(pos=pos,type=type_,length=length,num_stages=num_stages))
 
     def decide_tile_type(self, tile_pos, center: bool = False):
         neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
@@ -229,10 +268,10 @@ class Map:
         for dx, dy in neighbours:
             junctions.append(False)
             neighbouring_tiles_pos.append([tile_pos[0] + dx, tile_pos[1] + dy])
-            if 0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and (self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1 or self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].connectable):
+            if 0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and (self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1 or self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 2):
                 neighbours_road.append(1)
                 num_connections += 1
-                if self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_type > 3:
+                if self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_type > 3 and self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1:
                     junctions.pop(-1)
                     junctions.append(True)
             else:
@@ -271,14 +310,20 @@ class Map:
 
         if center:
             for pos in neighbouring_tiles_pos:
-                if self.tile_grid[pos[1]][pos[0]].tile_set == 1 and self.tile_grid[pos[1]][pos[0]].connectable:
+                if self.tile_grid[pos[1]][pos[0]].connectable:
                     self.decide_tile_type(pos)
+
+    def check_tile_use(self, pos):
+        for car in self.cars:
+            if pos in car.path[car.path_index:]:
+                return True
+        return False
 
     def on_click(self, del_: bool = False):
         if self.hover_tile_pos is not None:
             tile = self.tile_grid[self.hover_tile_pos[1]][self.hover_tile_pos[0]]
             if not tile.unbreakable:
-                if del_ and tile.tile_set == 1:
+                if del_ and tile.tile_set == 1 and not self.check_tile_use(self.hover_tile_pos):
                     tile.tile_set = 0
                     tile.tile_type = 0
                     tile.tile_rotation = 0
@@ -292,26 +337,57 @@ class Map:
                     return True
 
     def check_factory_clicked(self):
-        if self.hover_tile_pos is not None and self.hover_tile_pos == (self.grid_size_x // 2, self.grid_size_y // 2):
-            self.add_effect()
+        if self.hover_tile_pos is not None and self.hover_tile_pos == [self.grid_size_x // 2, self.grid_size_y // 2]:
+            self.add_effect((self.grid_size_x // 2, self.grid_size_y // 2), 0, 0.25)
             return True
 
     def update(self, dt):
         tile_x, tile_y = self.screen_to_grid(pygame.mouse.get_pos())
         tile_x, tile_y = int(tile_x), int(tile_y)
         if 0 <= tile_x < self.grid_size_x and 0 <= tile_y < self.grid_size_y:
-            self.hover_tile_pos = tile_x, tile_y
+            self.hover_tile_pos = [tile_x, tile_y]
         else:
             self.hover_tile_pos = None
 
+        for i, type_ in enumerate(self.cars_waiting):
+            for car in type_:
+                path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+                if path:
+                    car.reset(path, i, bool(i))
+                    self.cars.append(car)
+                    self.cars_waiting[i].remove(car)
+
+        completed_trips = 0
         for car in self.cars:
-            car.update_relative_position(dt)
+            if car.update(dt):
+                if car.to_hub:
+                    if car.been_to_factory:
+                        completed_trips += 1
+
+                    path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+                    if path:
+                        car.reset(path, 0, False)
+                    else:
+                        self.add_effect(car.path[0], 1, 2)
+                        self.cars_waiting[0].append(car)
+                        self.cars.remove(car)
+
+                else:
+                    path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+                    if path:
+                        car.reset(path, 1, True)
+                    else:
+                        self.add_effect(car.path[-1], 1, 2)
+                        self.cars_waiting[0].append(car)
+                        self.cars.remove(car)
 
         for effect in self.effects:
             effect.time += dt
             effect.stage = int(effect.time / effect.length * effect.num_stages)
             if effect.stage >= effect.num_stages:
                 self.effects.remove(effect)
+
+        return completed_trips
 
     def draw(self, show_hover = True, path = None):
         top_left_tile_pos = self.screen_to_grid((0, 0))
@@ -331,7 +407,7 @@ class Map:
                     # pygame.draw.circle(screen.WIN, (255 * val, 255 * val, 255 * val), (screen_x + self.scaled_tile_size_half, screen_y + self.scaled_tile_size_half), 4)
 
         for car in self.cars:
-            x, y = self.grid_to_screen(car.road_pos)
+            x, y = self.grid_to_screen(car.path[car.path_index])
 
             x += car.relative_x * self.scaled_tile_size
             y += (1 - car.relative_y) * self.scaled_tile_size
@@ -340,7 +416,7 @@ class Map:
 
         for effect in self.effects:
             x, y = self.grid_to_screen(effect.pos)
-            screen.WIN.blit(self.scaled_images_effect[effect.stage], (x, y))
+            screen.WIN.blit(self.scaled_images_effect[effect.type][effect.stage], (x, y))
 
         if show_hover:
             if self.hover_tile_pos is not None:

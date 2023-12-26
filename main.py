@@ -11,6 +11,6 @@ if __name__ == '__main__':
         if close_:
             run = 0
         else:
-            game(seed)
+            time_survived, money_earned = game(seed)
 
     screen.quit()

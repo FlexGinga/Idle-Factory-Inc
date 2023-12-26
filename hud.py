@@ -20,6 +20,8 @@ class Hud:
         self.image_icon_roads = None
         self.image_icon_trucks = None
 
+        self.image_red_haze = None
+
         self.load_images()
 
         self.buttons = [Button(self.pos[0] + self.size_x * 2 / 7, self.pos[1] + 8 * self.icon_size, False), Button(self.pos[0] + self.size_x * 5 / 7, self.pos[1] + 8 * self.icon_size, False),
@@ -28,11 +30,13 @@ class Hud:
 
     def load_images(self):
         path = "assets/hud/"
-        self.image_background = pygame.transform.scale(pygame.image.load(path+"background.png"), (self.size_x, self.size_y))
-        self.image_icon_time = pygame.transform.scale(pygame.image.load(path+"icons/time.png"), (self.icon_size, self.icon_size))
-        self.image_icon_money = pygame.transform.scale(pygame.image.load(path+"icons/money.png"), (self.icon_size, self.icon_size))
-        self.image_icon_roads = pygame.transform.scale(pygame.image.load(path+"icons/roads.png"), (self.icon_size, self.icon_size))
-        self.image_icon_trucks = pygame.transform.scale(pygame.image.load(path+"icons/trucks.png"), (self.icon_size, self.icon_size))
+        self.image_background = pygame.transform.scale(pygame.image.load(path+"background.png").convert_alpha(), (self.size_x, self.size_y))
+        self.image_icon_time = pygame.transform.scale(pygame.image.load(path+"icons/time.png").convert_alpha(), (self.icon_size, self.icon_size))
+        self.image_icon_money = pygame.transform.scale(pygame.image.load(path+"icons/money.png").convert_alpha(), (self.icon_size, self.icon_size))
+        self.image_icon_roads = pygame.transform.scale(pygame.image.load(path+"icons/roads.png").convert_alpha(), (self.icon_size, self.icon_size))
+        self.image_icon_trucks = pygame.transform.scale(pygame.image.load(path+"icons/trucks.png").convert_alpha(), (self.icon_size, self.icon_size))
+
+        self.image_red_haze = pygame.transform.scale(pygame.image.load(path+"red_haze.png").convert_alpha(), screen.WIN.get_size())
 
     def update_buttons(self, click: bool) -> list:
         statuses = []
@@ -48,7 +52,7 @@ class Hud:
         return statuses
 
     def draw(self, time: str = "00:00:00", money: str = "0", roads: str = "0", trucks: str = "0",
-             prices: list = ["", "", "", ""]):
+             prices: list = ["", "", "", ""], time_left: float = 10):
         screen.WIN.blit(self.image_background, (screen.WIN.get_width() - self.size_x, 0))
 
         screen.WIN.blit(self.image_icon_time, (self.pos[0] + self.icon_size, self.pos[1] + self.icon_size))
@@ -63,3 +67,6 @@ class Hud:
 
         for button, text, price in zip(self.buttons, self.buttons_text, prices):
             button.draw(text, price)
+
+        if time_left < 10 and (0.3 > time_left % 1 or 0.7 < time_left % 1):
+            screen.WIN.blit(self.image_red_haze, (0, 0))
