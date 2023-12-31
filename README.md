@@ -4,8 +4,7 @@ A-Level Computing Project by Jack Harley
 
 **To-Do**
 - Adjusted pathfinding - **COMPLETED**
-- Add cars - **COMPLETED**
-- Link pathfinding
+- Add cars
 - Complete map gen - **Fix spawning in start area**
 - Add cookie clicker features
   * add clicker - **COMPLETED**
@@ -14,3 +13,7 @@ A-Level Computing Project by Jack Harley
 - Different game loops
   * make start screen - **COMPLETED**
   * add end screen
+---
+- end screen
+- junction check
+- upgrades

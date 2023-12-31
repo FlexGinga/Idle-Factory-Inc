@@ -6,6 +6,8 @@ class Tile:
     tile_type: int
     tile_rotation: int
 
+    occupied: list
+
     tile_connections: list = ()
 
     unbreakable: bool = False

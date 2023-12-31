@@ -20,8 +20,8 @@ def game(seed: str):
 
     num_trucks = 0
     num_roads_available = 0
-    time_left = 15
-    money = 0
+    time_left = 60
+    money = 2000
 
     money_per_click = 1
     money_per_truck = 50
@@ -39,9 +39,6 @@ def game(seed: str):
     run = 1
     prev = time() - 0.001
     while run:
-        if time_left <= 0:
-            run = 0
-
         now = time()
         dt = now - prev
         prev = now
@@ -55,7 +52,8 @@ def game(seed: str):
 
         for e in pygame.event.get():
             if e.type == pygame.MOUSEWHEEL:
-                map.change_scale(e.y)
+                if pygame.mouse.get_pos()[0] < screen.WIN.get_width() - hud.size_x:
+                    map.change_scale(e.y)
 
             if e.type == pygame.MOUSEBUTTONDOWN:
                 if e.button == 1:
@@ -146,23 +144,39 @@ def game(seed: str):
             else:
                 button.deactivated = True
 
+        hud.update(dt)
+
         if button_statuses[0]:
-            money -= frame_prices[0]
-            num_roads_available += 1
-            prices.roads_bought += 1
+            if not hud.buttons[0].deactivated:
+                money -= frame_prices[0]
+                num_roads_available += 1
+                prices.roads_bought += 1
+            else:
+                hud.add_message("Not enough money!")
         if button_statuses[1]:
-            money -= frame_prices[1]
-            num_trucks += 1
-            map.add_car()
-            prices.vehicles_bought += 1
-        if button_statuses[2]:
-            money -= frame_prices[2]
-            time_left += 10
-            prices.time_bought += 1
+            if not hud.buttons[1].deactivated:
+                if map.add_car():
+                    money -= frame_prices[1]
+                    num_trucks += 1
+                    prices.vehicles_bought += 1
+                else:
+                    hud.add_message("No available factories for truck!")
+            else:
+                hud.add_message("Not enough money!")
+        if button_statuses[2] or time_left <= 0:
+            if not hud.buttons[2].deactivated:
+                money -= frame_prices[2]
+                time_left += 20
+                prices.time_bought += 1
+            else:
+                hud.add_message("Not enough money!")
         if button_statuses[3]:
-            money -= frame_prices[3]
-            map.expand_grid()
-            prices.land_bought += 1
+            if not hud.buttons[3].deactivated:
+                money -= frame_prices[3]
+                map.expand_grid()
+                prices.land_bought += 1
+            else:
+                hud.add_message("Not enough money!")
 
         screen.WIN.fill((52, 52, 52))
 
@@ -171,5 +185,8 @@ def game(seed: str):
                  frame_prices, time_left)
 
         pygame.display.flip()
+
+        if time_left <= 0:
+            run = 0
 
     return total_time, total_money

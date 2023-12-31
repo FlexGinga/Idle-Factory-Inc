@@ -13,10 +13,10 @@ class Button:
         pos of x and y is center of button object
         """
 
-        self.size_x = 100
-        self.size_y = 160
+        self.size_x = screen.WIN.get_height() / 27 * 2
+        self.size_y = self.size_x * 1.6
 
-        self.font = pygame.font.Font("assets/PublicPixel-z84yD.ttf", 12)
+        self.font = pygame.font.Font("assets/PublicPixel-z84yD.ttf", int(self.size_x // 8))
 
         self.button_center_pos = (x, y + self.size_y * 0.2)
         self.button_radius = self.size_x * 0.4
@@ -55,3 +55,11 @@ class Button:
     def draw(self, text, price):
         screen.WIN.blit(self.images[self.deactivated][self.pressed], self.draw_pos)
         draw_text(screen.WIN, self.font, [text, str(price)], self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
+
+
+class Upgrade:
+    def __init__(self):
+        self.image = None
+
+    def draw(self, upgrades):
+        pass

@@ -34,19 +34,19 @@ def clamp(val, min_val, max_val):
 
 
 def seconds_to_time(seconds: int):
-    str_hours = seconds // 3600 % 24
+    str_hours = int(seconds // 3600 % 24)
     if str_hours < 10:
         str_hours = f"0{str_hours}"
     else:
         str_hours = str(str_hours)
 
-    str_minutes = seconds // 60 % 60
+    str_minutes = int(seconds // 60 % 60)
     if str_minutes < 10:
         str_minutes = f"0{str_minutes}"
     else:
         str_minutes = str(str_minutes)
 
-    str_seconds = seconds % 60
+    str_seconds = int(seconds % 60)
     if str_seconds < 10:
         str_seconds = f"0{str_seconds}"
     else:

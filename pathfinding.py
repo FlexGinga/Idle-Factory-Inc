@@ -50,7 +50,7 @@ class AStar:
             return temp_node
 
         def can_travel_check(pos1: list, pos2: list) -> bool:
-            if pos2 in grid[pos1[1]][pos1[0]].tile_connections:
+            if pos2 in grid[pos1[1]][pos1[0]].tile_connections and (grid[pos2[1]][pos2[0]].tile_set != 2 or pos2 == end_pos):
                 return 1
             return 0
 

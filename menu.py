@@ -60,4 +60,6 @@ def menu():
         screen.WIN.blit(text, (c / text_speed * -size_x, size_y - size_y // 48))
         pygame.display.flip()
 
+    if seed == "":
+        seed = " "
     return seed, exit_

@@ -1,5 +1,6 @@
 from menu import menu
 from game import game
+from end_menu import end_menu
 import screen
 
 if __name__ == '__main__':
@@ -12,5 +13,6 @@ if __name__ == '__main__':
             run = 0
         else:
             time_survived, money_earned = game(seed)
+            end_menu(time_survived, money_earned)
 
     screen.quit()

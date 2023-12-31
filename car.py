@@ -1,38 +1,47 @@
+import string
 
+from qol import clamp
 
 class Car:
     def __init__(self, path, to_hub: bool = False, been_to_factory: bool = False):
-        self.driven_percentage = 0
+        self.driven_percentage = 0.96
 
         self.to_hub = to_hub
         self.been_to_factory = been_to_factory
 
-        # self.acceleration = 4
-        # self.deceleration = 5
-        # self.max_speed = 4
-        self.speed = 0.5
+        self.acceleration = 0.3
+        self.deceleration = 0
+        self.max_speed = 0.6
+        self.speed = 0
+
+        self.state = 1 #  0, 1 = stop, go
 
         self.path = path
-        self.path_index = 1
+        self.path_index = 0
 
+        self.prev_direction = None
         self.direction = self.get_start_direction()
 
         self.relative_direction = self.direction
-        self.relative_x, self.relative_y = self.rotate_relative_points(0.3, 0, self.relative_direction)
+        self.relative_x, self.relative_y = 0, 0
+        self.update_relative_position()
+
 
     def reset(self, path, to_hub: bool = False, been_to_factory: bool = False):
-        self.driven_percentage = 0
+        self.driven_percentage = 0.96
 
         self.to_hub = to_hub
         self.been_to_factory = been_to_factory
 
+        self.state = 1
+
         self.path = path
-        self.path_index = 1
+        self.path_index = 0
 
         self.direction = self.get_start_direction()
 
         self.relative_direction = self.direction
-        self.relative_x, self.relative_y = self.rotate_relative_points(0.3, 0, self.relative_direction)
+        self.update_relative_position()
 
     def get_start_direction(self):
         x1, y1 = self.path[0]
@@ -50,20 +59,33 @@ class Car:
 
         return [[0, 1], [0, -1], [-1, 0], [1, 0]].index([dx, dy])
 
+    def set_deceleration_amount(self):
+        dist = 1 - self.driven_percentage
+        deceleration = -(self.speed ** 2) / (2 * dist)
+        self.deceleration = deceleration
 
     def update(self, dt):
-        if self.update_relative_position(dt):
+        if self.state and self.speed < self.max_speed :
+            self.speed += self.acceleration * dt
+        elif not self.state and self.speed > 0 and self.driven_percentage > 0.5:
+            self.speed += self.deceleration * dt
+
+        self.speed = clamp(self.speed, 0, self.max_speed)
+        self.driven_percentage += self.speed * dt
+
+        if self.update_relative_position():
+            self.prev_direction = self.direction * 1
+            self.direction = self.get_next_direction()
             self.path_index += 1
             self.driven_percentage = 0
 
             self.relative_x, self.relative_y = self.rotate_relative_points(0.3 ,0, self.direction)
 
             if self.path_index >= len(self.path) - 1:
-                return True
+                return 2
+            return 1
 
-    def update_relative_position(self, dt):
-        self.driven_percentage += self.speed * dt
-
+    def update_relative_position(self):
         match self.get_action(self.direction):
             case 0:
                 action_complete = self.u_turn()
@@ -75,6 +97,21 @@ class Car:
                 action_complete = self.right_turn()
 
         return action_complete
+
+    def get_next_direction(self):
+        match self.get_action(self.direction):
+            case 0:
+                direction = self.direction + 2
+            case 1:
+                direction = self.direction
+            case 2:
+                direction = self.direction - 1
+            case 3:
+                direction = self.direction + 1
+
+        direction %= 4
+
+        return direction
 
     @staticmethod
     def rotate_relative_points(x: float, y: float, direction: int):
@@ -120,10 +157,6 @@ class Car:
             self.relative_direction = (self.direction + 2) % 4
         else:
             # self.next_pos(0, 1)
-
-            self.direction += 2
-            self.direction %= 4
-
             return True
 
     def straight_on(self):
@@ -134,7 +167,6 @@ class Car:
             self.relative_direction = self.direction
         else:
             # self.next_pos(0, -1)
-
             return True
 
     def left_turn(self):
@@ -150,10 +182,6 @@ class Car:
             self.relative_direction = (self.direction - 1) % 4
         else:
             # self.next_pos(-1, 0)
-
-            self.direction -= 1
-            self.direction %= 4
-
             return True
 
     def right_turn(self):
@@ -169,8 +197,4 @@ class Car:
             self.relative_direction = (self.direction + 1) % 4
         else:
             # self.next_pos(1, 0)
-
-            self.direction += 1
-            self.direction %= 4
-
             return True

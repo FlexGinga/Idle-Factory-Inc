@@ -1,4 +1,3 @@
-from hub_spawns import HUB_SPAWNS
 from os import listdir
 from tile import Tile
 from car import Car
@@ -171,12 +170,32 @@ class Map:
 
                     tile.tile_connections = neighbouring_tiles_pos
 
+    def check_neighbours(self, pos):
+        sets = []
+        types = []
+
+        neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+        x, y = pos
+        for dx, dy in neighbours:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.grid_size_x and 0 <= ny < self.grid_size_y:
+                sets.append(self.tile_grid[ny][nx].tile_set)
+                types.append(self.tile_grid[ny][nx].tile_type)
+            else:
+                sets.append(None)
+                types.append(None)
+
+        return sets, types
+
     def create_grid(self, stage: int = 0):
         self.stage = stage
         self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
 
-        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
-        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True)
+        self.tile_grid = [[None for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
+        for y in range(self.grid_size_y):
+            for x in range(self.grid_size_x):
+                self.tile_grid[y][x] = Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False])
+        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True, occupied=[False, False, False, False])
 
         self.add_factories()
 
@@ -190,12 +209,12 @@ class Map:
         x_dif = (self.grid_size_x - start_x) // 2 + 1
         y_dif = (self.grid_size_y - start_y) // 2 + 1
 
-        x_limit_low, x_limit_high = self.grid_size_x // 2 - x_dif // 2, self.grid_size_x // 2 + x_dif // 2
-        y_limit_low, y_limit_high = self.grid_size_y // 2 - y_dif // 2, self.grid_size_y // 2 + y_dif // 2
+        x_limit_low, x_limit_high = x_dif, self.grid_size_x - x_dif
+        y_limit_low, y_limit_high = y_dif, self.grid_size_y - y_dif
 
         for _ in range(self.stage + 1):
             x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
-            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
+            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or 2 in self.check_neighbours([x, y])[0] or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
                 x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
 
             self.tile_grid[y][x].tile_set = 2
@@ -204,8 +223,6 @@ class Map:
             self.tile_grid[y][x].connectable = 1
             self.tile_grid[y][x].unbreakable = 1
             self.factories.append([[x, y], 0])
-
-            self.decide_tile_type([x, y], True)
 
     def expand_grid(self):
         self.stage += 1
@@ -216,7 +233,7 @@ class Map:
         y_dif = (self.grid_size_y - old_y) // 2
 
         old = self.tile_grid
-        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
+        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False]) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         for y, row in enumerate(old):
             for x, tile in enumerate(row):
                 self.tile_grid[y + y_dif][x + x_dif] = tile
@@ -241,18 +258,28 @@ class Map:
 
         self.add_factories()
 
+        for y, row in enumerate(self.tile_grid):
+            for x, tile in enumerate(row):
+                self.decide_tile_type([x, y])
+
         self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
         self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
 
     def find_least_populated_factory(self):
-        smallest_index = 0
+        acceptable = False
+        smallest_index = -1
         for i, factory in enumerate(self.factories):
-            if factory[1] < self.factories[smallest_index][1]:
+            if (factory[1] < self.factories[smallest_index][1] or smallest_index == -1) and factory[1] < 5 and AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], factory[0], self.prn) != []:
+                acceptable = True
                 smallest_index = i
-        return smallest_index
+        return smallest_index, acceptable
 
     def add_car(self):
-        self.cars.append(Car(AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], self.factories[self.find_least_populated_factory()][0], self.prn), False))
+        factory_index, accepted = self.find_least_populated_factory()
+        if accepted:
+            self.cars.append(Car(AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], self.factories[factory_index][0], self.prn), False))
+            self.factories[factory_index][1] += 1
+        return accepted
 
     def add_effect(self, pos, type_, length):
         num_stages = len(self.scaled_images_effect[type_])
@@ -278,8 +305,17 @@ class Map:
                 neighbouring_tiles_pos.pop(-1)
                 neighbours_road.append(0)
 
+        # for i, junction in enumerate(junctions):
+        #     if junction and num_connections > 2:
+        #         j = (i + 2) % 2
+        #         num_connections -= 1
+        #         dx, dy = neighbours[j]
+        #         neighbouring_tiles_pos.remove([tile_pos[0] + dx, tile_pos[1] + dy])
+        #         neighbours_road[j] = 0
+
         self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections = neighbouring_tiles_pos
 
+        old_type = self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type
         if self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set == 1:
             match num_connections:
                 case 0:
@@ -308,7 +344,7 @@ class Map:
                     self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 7
                     self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = 0
 
-        if center:
+        if center or old_type != self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type:
             for pos in neighbouring_tiles_pos:
                 if self.tile_grid[pos[1]][pos[0]].connectable:
                     self.decide_tile_type(pos)
@@ -359,27 +395,46 @@ class Map:
 
         completed_trips = 0
         for car in self.cars:
-            if car.update(dt):
-                if car.to_hub:
-                    if car.been_to_factory:
-                        completed_trips += 1
+            path_x, path_y = car.path[car.path_index + 1]
+            if (self.tile_grid[path_y][path_x].occupied[car.get_next_direction()] or (True in self.tile_grid[path_y][path_x].occupied and self.tile_grid[path_y][path_x].tile_type > 3)) and car.path_index + 1 != len(car.path) - 1:
+                car.state = 0
+                car.set_deceleration_amount()
+            else:
+                car.state = 1
 
-                    path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
-                    if path:
-                        car.reset(path, 0, False)
-                    else:
-                        self.add_effect(car.path[0], 1, 2)
-                        self.cars_waiting[0].append(car)
-                        self.cars.remove(car)
+            match car.update(dt):
+                case 1:
+                    old_x, old_y = car.path[car.path_index - 1]
+                    self.tile_grid[old_y][old_x].occupied[car.prev_direction] = False
+                    new_x, new_y = car.path[car.path_index]
+                    self.tile_grid[new_y][new_x].occupied[car.direction] = True
+                case 2:
+                    old_x, old_y = car.path[car.path_index - 1]
+                    self.tile_grid[old_y][old_x].occupied[car.prev_direction] = False
+                    if car.to_hub:
+                        if car.been_to_factory:
+                            completed_trips += 1
 
-                else:
-                    path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
-                    if path:
-                        car.reset(path, 1, True)
+                        path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+                        if path:
+                            car.reset(path, 0, False)
+                        else:
+                            self.add_effect(car.path[0], 1, 2)
+                            self.cars_waiting[0].append(car)
+                            self.cars.remove(car)
+
                     else:
-                        self.add_effect(car.path[-1], 1, 2)
-                        self.cars_waiting[0].append(car)
-                        self.cars.remove(car)
+                        path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+
+                        if path:
+                            car.reset(path, 1, True)
+                        else:
+                            self.add_effect(car.path[-1], 1, 2)
+                            self.cars_waiting[0].append(car)
+                            self.cars.remove(car)
+
+                    new_x, new_y = car.path[car.path_index]
+                    self.tile_grid[new_y][new_x].occupied[car.direction] = True
 
         for effect in self.effects:
             effect.time += dt
