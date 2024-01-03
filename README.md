@@ -12,8 +12,7 @@ A-Level Computing Project by Jack Harley
   * add fail conditions - **COMPLETED**
 - Different game loops
   * make start screen - **COMPLETED**
-  * add end screen
+  * add end screen - **COMPLETED**
 ---
-- end screen
 - junction check
 - upgrades

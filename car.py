@@ -11,7 +11,6 @@ class Car:
 
         self.acceleration = 0.3
         self.deceleration = 0
-        self.max_speed = 0.6
         self.speed = 0
 
         self.state = 1 #  0, 1 = stop, go
@@ -50,9 +49,9 @@ class Car:
 
         return [[0, -1], [1, 0], [0, 1], [-1, 0]].index([dx, dy])
 
-    def get_action(self, direction):
-        x1, y1 = self.path[self.path_index]
-        x2, y2 = self.path[self.path_index + 1]
+    def get_action(self, direction, step: int = 0):
+        x1, y1 = self.path[self.path_index + step]
+        x2, y2 = self.path[self.path_index + step + 1]
         dx, dy = x2 - x1, y2 - y1
 
         dx, dy = self.rotate_direction_vector(dx, dy, direction)
@@ -64,13 +63,13 @@ class Car:
         deceleration = -(self.speed ** 2) / (2 * dist)
         self.deceleration = deceleration
 
-    def update(self, dt):
-        if self.state and self.speed < self.max_speed :
+    def update(self, dt, max_speed):
+        if self.state and self.speed < max_speed :
             self.speed += self.acceleration * dt
         elif not self.state and self.speed > 0 and self.driven_percentage > 0.5:
             self.speed += self.deceleration * dt
 
-        self.speed = clamp(self.speed, 0, self.max_speed)
+        self.speed = clamp(self.speed, 0, max_speed)
         self.driven_percentage += self.speed * dt
 
         if self.update_relative_position():
@@ -98,8 +97,8 @@ class Car:
 
         return action_complete
 
-    def get_next_direction(self):
-        match self.get_action(self.direction):
+    def get_next_direction(self, step: int = 0):
+        match self.get_action(self.direction, step):
             case 0:
                 direction = self.direction + 2
             case 1:

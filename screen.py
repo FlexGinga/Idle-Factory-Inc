@@ -7,7 +7,7 @@ def init(title: str = None, icon_path: str = None):
     pygame.init()
 
     global WIN
-    WIN = pygame.display.set_mode(pyautogui.size(), pygame.FULLSCREEN | pygame.SRCALPHA)
+    WIN = pygame.display.set_mode((1920,1080), pygame.FULLSCREEN | pygame.SRCALPHA)
 
     if title is not None:
         pygame.display.set_caption(title)

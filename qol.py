@@ -1,12 +1,33 @@
 import pygame
 
-
-def draw_text(win: pygame.Surface, font: pygame.font.Font, text, pos: tuple, colour=(255, 255, 255), center_x: bool = False, center_y: bool = False):
+def draw_text(win: pygame.Surface, font: pygame.font.Font, text, pos: tuple, colour=(255, 255, 255),
+              center_x: bool = False, center_y: bool = False, max_length: int = 0):
     text_surfs = []
     if type(text) == str:
         text_surfs.append(font.render(text, 0, colour))
     elif type(text) in [list, tuple]:
+        adjusted_text = []
         for line in text:
+            if 0 < max_length < len(line):
+
+                to_add = line
+                splittable = True
+                while len(to_add) > max_length and splittable:
+                    split = None
+                    for i in range(max_length):
+                        if to_add[i] == " ":
+                            split = i
+                    if split is None:
+                        splittable = False
+                    else:
+                        adjusted_text.append(to_add[:split])
+                        to_add = to_add[split+1:]
+                adjusted_text.append(to_add)
+
+            else:
+                adjusted_text.append(line)
+
+        for line in adjusted_text:
             text_surfs.append(font.render(line, 0, colour))
     else:
         raise Exception("type error")

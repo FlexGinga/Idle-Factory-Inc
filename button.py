@@ -54,7 +54,7 @@ class Button:
 
     def draw(self, text, price):
         screen.WIN.blit(self.images[self.deactivated][self.pressed], self.draw_pos)
-        draw_text(screen.WIN, self.font, [text, str(price)], self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
+        draw_text(screen.WIN, self.font, [text, "£"+str(price)], self.text_pos, colour=(23, 23, 23), center_x=True, center_y=True)
 
 
 class Upgrade:

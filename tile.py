@@ -7,6 +7,7 @@ class Tile:
     tile_rotation: int
 
     occupied: list
+    occupied_action: list
 
     tile_connections: list = ()
 

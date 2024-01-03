@@ -18,13 +18,14 @@ class AStar:
     def find_path(grid: list, start_pos: list, end_pos: list, prn, old_path=None) -> list:
         end_x, end_y = end_pos
 
+        #  removing nodes from a previous path from the possible nodes in the new path to create an alternate solution
         deactivated_nodes = []
         if old_path is not None and len(old_path) > 2:
             for node in old_path:
                 if prn.generate() % 20 == 0:
                     deactivated_nodes.append(node)
 
-        def generate_g_cost(parent: Node = None) -> int:
+        def generate_g_cost(parent: Node = None) -> int: #  generates a value that represents the length of the current path
             dist = 0
             while parent is not None:
                 dist += 10 + prn.generate() % 5
@@ -32,7 +33,7 @@ class AStar:
 
             return dist
 
-        def generate_h_cost(x1, y1, x2, y2) -> int:
+        def generate_h_cost(x1, y1, x2, y2) -> int: #  generates a value that represents the distance to the final position
             dx2 = (x2 - x1) ** 2
             dy2 = (y2 - y1) ** 2
 
@@ -40,7 +41,7 @@ class AStar:
 
             return int(dist * 10)
 
-        def generate_node(start_pos: list, parent: Node = None) -> Node:
+        def generate_node(start_pos: list, parent: Node = None) -> Node: #  generates a node for the pathfinding grid search
             x, y = start_pos
 
             g_cost = generate_g_cost(parent)
@@ -49,8 +50,9 @@ class AStar:
             temp_node = Node(x=x, y=y, g_cost=g_cost, h_cost=h_cost, f_cost=f_cost, parent=parent)
             return temp_node
 
-        def can_travel_check(pos1: list, pos2: list) -> bool:
-            if pos2 in grid[pos1[1]][pos1[0]].tile_connections and (grid[pos2[1]][pos2[0]].tile_set != 2 or pos2 == end_pos):
+        def can_travel_check(pos1: list, pos2: list) -> bool: #  checks if there is a connection between two nodes in the grid
+            if pos2 in grid[pos1[1]][pos1[0]].tile_connections and (grid[pos2[1]][pos2[0]].tile_set != 2
+                                                                    or pos2 == end_pos):
                 return 1
             return 0
 
@@ -69,7 +71,7 @@ class AStar:
         path_found = 0
         while not path_found and len(to_check_list) > 0:
             to_check = to_check_list[0]
-            for node in to_check_list:
+            for node in to_check_list: #  finds node with lowest f cost
                 if nodes[node[1]][node[0]].f_cost < nodes[to_check[1]][to_check[0]].f_cost:
                     to_check = node
 
@@ -96,7 +98,7 @@ class AStar:
                                 to_check_list.append(n_pos)
 
         path = []
-        if path_found:
+        if path_found: #  generates a list of all the grid positions in the path found
             path.insert(0, to_check)
             while nodes[to_check[1]][to_check[0]].parent is not None:
                 p = nodes[to_check[1]][to_check[0]].parent
@@ -105,7 +107,7 @@ class AStar:
         return path
 
     @staticmethod
-    def generate_paths(grid: dict, start_pos: tuple, end_pos: tuple, prn, num_paths: int = 1) -> list:
+    def generate_paths(grid: dict, start_pos: tuple, end_pos: tuple, prn, num_paths: int = 1) -> list: #  generates multiple unique paths to a destination
         paths = []
         old_paths = []
         for i in range(num_paths):

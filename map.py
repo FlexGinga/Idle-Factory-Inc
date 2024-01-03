@@ -133,6 +133,10 @@ class Map:
         self.offset_x += delta_x
         self.offset_y += delta_y
 
+    def reset_offset(self):
+        self.offset_x = 0
+        self.offset_y = 0
+
     def screen_to_grid(self, screen_pos):
         x, y = screen_pos
         x = (x - screen.WIN.get_width() // 2 - self.offset_x + self.offset_constant_x) / self.scaled_tile_size
@@ -194,8 +198,8 @@ class Map:
         self.tile_grid = [[None for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         for y in range(self.grid_size_y):
             for x in range(self.grid_size_x):
-                self.tile_grid[y][x] = Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False])
-        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True, occupied=[False, False, False, False])
+                self.tile_grid[y][x] = Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False], occupied_action=[None, None, None, None])
+        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True, occupied=[False, False, False, False], occupied_action=[None, None, None, None])
 
         self.add_factories()
 
@@ -233,7 +237,7 @@ class Map:
         y_dif = (self.grid_size_y - old_y) // 2
 
         old = self.tile_grid
-        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False]) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
+        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False], occupied_action=[None, None, None, None]) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         for y, row in enumerate(old):
             for x, tile in enumerate(row):
                 self.tile_grid[y + y_dif][x + x_dif] = tile
@@ -285,33 +289,28 @@ class Map:
         num_stages = len(self.scaled_images_effect[type_])
         self.effects.append(Effect(pos=pos,type=type_,length=length,num_stages=num_stages))
 
-    def decide_tile_type(self, tile_pos, center: bool = False):
+    def get_tile_neighbours(self, tile_pos):
         neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
         neighbouring_tiles_pos = []
         neighbours_road = []
         num_connections = 0
-        junctions = []
 
         for dx, dy in neighbours:
-            junctions.append(False)
             neighbouring_tiles_pos.append([tile_pos[0] + dx, tile_pos[1] + dy])
-            if 0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and (self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1 or self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 2):
+            if 0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][
+                0] < self.grid_size_x and (
+                    self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1 or
+                    self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 2):
                 neighbours_road.append(1)
                 num_connections += 1
-                if self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_type > 3 and self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1:
-                    junctions.pop(-1)
-                    junctions.append(True)
             else:
                 neighbouring_tiles_pos.pop(-1)
                 neighbours_road.append(0)
 
-        # for i, junction in enumerate(junctions):
-        #     if junction and num_connections > 2:
-        #         j = (i + 2) % 2
-        #         num_connections -= 1
-        #         dx, dy = neighbours[j]
-        #         neighbouring_tiles_pos.remove([tile_pos[0] + dx, tile_pos[1] + dy])
-        #         neighbours_road[j] = 0
+        return neighbouring_tiles_pos, neighbours_road, num_connections
+
+    def decide_tile_type(self, tile_pos, center: bool = False):
+        neighbouring_tiles_pos,neighbours_road, num_connections = self.get_tile_neighbours(tile_pos)
 
         self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections = neighbouring_tiles_pos
 
@@ -377,7 +376,19 @@ class Map:
             self.add_effect((self.grid_size_x // 2, self.grid_size_y // 2), 0, 0.25)
             return True
 
-    def update(self, dt):
+    def reset_cars(self):
+        for car in self.cars:
+            if car.path_index != 0:
+                x, y = car.path[car.path_index]
+                self.tile_grid[y][x].occupied[car.prev_direction] = False
+                self.tile_grid[y][x].occupied_action[car.prev_direction] = None
+
+            if not car.to_hub:
+                car.path = [car.path[-1], car.path[0]]
+            self.cars_waiting[1].append(car)
+        self.cars = []
+
+    def update(self, dt, car_speed, paused: bool = False):
         tile_x, tile_y = self.screen_to_grid(pygame.mouse.get_pos())
         tile_x, tile_y = int(tile_x), int(tile_y)
         if 0 <= tile_x < self.grid_size_x and 0 <= tile_y < self.grid_size_y:
@@ -385,39 +396,54 @@ class Map:
         else:
             self.hover_tile_pos = None
 
-        for i, type_ in enumerate(self.cars_waiting):
-            for car in type_:
-                path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
-                if path:
-                    car.reset(path, i, bool(i))
-                    self.cars.append(car)
-                    self.cars_waiting[i].remove(car)
+        if not paused:
+            for i, type_ in enumerate(self.cars_waiting):
+                for car in type_:
+                    path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
+                    if path:
+                        car.reset(path, bool(i), bool(i))
+                        self.cars.append(car)
+                        self.cars_waiting[i].remove(car)
 
         completed_trips = 0
         for car in self.cars:
             path_x, path_y = car.path[car.path_index + 1]
-            if (self.tile_grid[path_y][path_x].occupied[car.get_next_direction()] or (True in self.tile_grid[path_y][path_x].occupied and self.tile_grid[path_y][path_x].tile_type > 3)) and car.path_index + 1 != len(car.path) - 1:
+
+            if car.path_index + 1 == len(car.path) - 1 or (not self.tile_grid[path_y][path_x].occupied[car.get_next_direction()] and
+                                                            (
+                                                                    self.tile_grid[path_y][path_x].tile_type < 4 or
+                                                                    (self.tile_grid[path_y][path_x].tile_type == 4 and (True not in self.tile_grid[path_y][path_x].occupied or self.tile_grid[path_y][path_x].occupied.count(True) == 1 and self.tile_grid[path_y][path_x].occupied[(car.get_next_direction() + 2) % 4] and car.get_action(1) == 1 and self.tile_grid[path_y][path_x].occupied_action[(car.get_next_direction() + 2) % 4] == 1))
+                                                            )
+            ):
+                car.state = 1
+            else:
                 car.state = 0
                 car.set_deceleration_amount()
-            else:
-                car.state = 1
 
-            match car.update(dt):
+
+            match car.update(dt, car_speed):
                 case 1:
                     old_x, old_y = car.path[car.path_index - 1]
                     self.tile_grid[old_y][old_x].occupied[car.prev_direction] = False
+                    self.tile_grid[old_y][old_x].occupied_action[car.prev_direction] = None
                     new_x, new_y = car.path[car.path_index]
                     self.tile_grid[new_y][new_x].occupied[car.direction] = True
+                    self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
+
                 case 2:
                     old_x, old_y = car.path[car.path_index - 1]
                     self.tile_grid[old_y][old_x].occupied[car.prev_direction] = False
+                    self.tile_grid[old_y][old_x].occupied_action[car.prev_direction] = None
                     if car.to_hub:
                         if car.been_to_factory:
                             completed_trips += 1
 
                         path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
                         if path:
-                            car.reset(path, 0, False)
+                            car.reset(path, False, False)
+                            new_x, new_y = car.path[car.path_index]
+                            self.tile_grid[new_y][new_x].occupied[car.direction] = True
+                            self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
                         else:
                             self.add_effect(car.path[0], 1, 2)
                             self.cars_waiting[0].append(car)
@@ -427,14 +453,14 @@ class Map:
                         path = AStar.find_path(self.tile_grid, car.path[-1], car.path[0], self.prn)
 
                         if path:
-                            car.reset(path, 1, True)
+                            car.reset(path, True, True)
+                            new_x, new_y = car.path[car.path_index]
+                            self.tile_grid[new_y][new_x].occupied[car.direction] = True
+                            self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
                         else:
                             self.add_effect(car.path[-1], 1, 2)
-                            self.cars_waiting[0].append(car)
+                            self.cars_waiting[1].append(car)
                             self.cars.remove(car)
-
-                    new_x, new_y = car.path[car.path_index]
-                    self.tile_grid[new_y][new_x].occupied[car.direction] = True
 
         for effect in self.effects:
             effect.time += dt
