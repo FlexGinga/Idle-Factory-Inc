@@ -9,6 +9,7 @@ from upgrade import Upgrade
 import screen
 import pygame
 
+
 def game(seed: str):
     prn = PseudoRandomNumber()
     prn.set_seed(seed)
@@ -21,11 +22,12 @@ def game(seed: str):
     num_trucks = 0
     num_roads_available = 0
     time_left = 60
-    money = 200000
+    money = 2000
 
     money_per_click = 1
     money_per_truck = 50
     car_speed = 0.6
+    car_acceleration = 0.3
 
     total_time = 0
     total_money = 0
@@ -69,6 +71,7 @@ def game(seed: str):
         button_statuses = [False, False, False, False]
 
         mb1 = 0
+        money_click = False
         hud_clicked = 0
 
         for e in pygame.event.get():
@@ -114,6 +117,9 @@ def game(seed: str):
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     run = 0
+
+                if e.key in [pygame.K_z, pygame.K_x]:
+                    money_click = True
 
                 if e.key == pygame.K_SPACE:
                     reset_timer_start = True
@@ -179,11 +185,13 @@ def game(seed: str):
                 if map.on_click(bool(clicked_type-1)):
                     num_roads_available += clicked_type * 2 - 3
 
-        if not build_mode and mb1 and map.check_factory_clicked():
+        if (not build_mode and mb1 and map.check_factory_clicked()) or money_click:
+            map.add_effect((map.grid_size_x // 2, map.grid_size_y // 2), 0, 0.25)
+
             money += money_per_click
             total_money += money_per_click
 
-        trucks_completed = map.update(dt, car_speed, cooldown_timer_start)
+        trucks_completed = map.update(dt, car_speed, car_acceleration, cooldown_timer_start)
         money += trucks_completed * money_per_truck
         total_money += trucks_completed * money_per_truck
 
@@ -204,7 +212,8 @@ def game(seed: str):
                             money_per_truck *= 1.5
                             hud.add_message("Truck income increased", colour=(20, 255, 60))
                         case 2:
-                            car_speed += 0.025
+                            car_speed += 0.05
+                            car_acceleration += 0.1
                             hud.add_message("Truck speed has been increased", colour=(20, 255, 60))
 
                     level = prices.upgrades_bought[upgrade.func]
@@ -249,9 +258,6 @@ def game(seed: str):
                 prices.land_bought += 1
             else:
                 hud.add_message("Not enough money!")
-
-        for upgrade in upgrades:
-            
 
         screen.WIN.fill((52, 52, 52))
 

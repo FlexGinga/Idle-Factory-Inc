@@ -373,7 +373,6 @@ class Map:
 
     def check_factory_clicked(self):
         if self.hover_tile_pos is not None and self.hover_tile_pos == [self.grid_size_x // 2, self.grid_size_y // 2]:
-            self.add_effect((self.grid_size_x // 2, self.grid_size_y // 2), 0, 0.25)
             return True
 
     def reset_cars(self):
@@ -388,7 +387,50 @@ class Map:
             self.cars_waiting[1].append(car)
         self.cars = []
 
-    def update(self, dt, car_speed, paused: bool = False):
+    @staticmethod
+    def check_car_doing(tile: Tile, direction: int, action: int = None):
+        if tile.occupied[direction]:
+            if tile.occupied_action[direction] == action or tile.occupied_action[direction] is None:
+                return True
+        return False
+
+    def check_clear(self, car: Car, pos: list):
+        pos_x, pos_y = pos
+
+        if car.path_index + 1 == len(car.path) - 1:
+            return True
+        elif not self.tile_grid[pos_y][pos_x].occupied[car.get_next_direction()]:
+            if self.tile_grid[pos_y][pos_x].tile_type < 4:
+                return True
+            elif self.tile_grid[pos_y][pos_x].tile_type == 4:
+                rotation_diff = (4 - self.tile_grid[pos_y][pos_x].tile_rotation) % 4
+                match car.get_action(1):
+                    case 1:  # straight
+                        match car.get_next_direction() - rotation_diff:
+                            case 1:  # far side
+                                if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3):
+                                    return True
+                            case 3:  # close side
+                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff, 3) and self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3) and self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 2)):
+                                    return True
+                    case 2:  # left
+                        match car.get_next_direction() - rotation_diff:
+                            case 0:  # to junction
+                                if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1):
+                                    return True
+                            case 3:  # close side
+                                return True
+
+                    case 3:  # right
+                        match car.get_next_direction() - rotation_diff:
+                            case 0:  # to junction
+                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff)):
+                                    return True
+                            case 1:  # far side
+                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff)):
+                                    return True
+
+    def update(self, dt, car_speed, car_acceleration, paused: bool = False):
         tile_x, tile_y = self.screen_to_grid(pygame.mouse.get_pos())
         tile_x, tile_y = int(tile_x), int(tile_y)
         if 0 <= tile_x < self.grid_size_x and 0 <= tile_y < self.grid_size_y:
@@ -407,28 +449,20 @@ class Map:
 
         completed_trips = 0
         for car in self.cars:
-            path_x, path_y = car.path[car.path_index + 1]
-
-            if car.path_index + 1 == len(car.path) - 1 or (not self.tile_grid[path_y][path_x].occupied[car.get_next_direction()] and
-                                                            (
-                                                                    self.tile_grid[path_y][path_x].tile_type < 4 or
-                                                                    (self.tile_grid[path_y][path_x].tile_type == 4 and (True not in self.tile_grid[path_y][path_x].occupied or self.tile_grid[path_y][path_x].occupied.count(True) == 1 and self.tile_grid[path_y][path_x].occupied[(car.get_next_direction() + 2) % 4] and car.get_action(1) == 1 and self.tile_grid[path_y][path_x].occupied_action[(car.get_next_direction() + 2) % 4] == 1))
-                                                            )
-            ):
+            if self.check_clear(car, car.path[car.path_index + 1]):
                 car.state = 1
             else:
                 car.state = 0
                 car.set_deceleration_amount()
 
-
-            match car.update(dt, car_speed):
+            match car.update(dt, car_speed, car_acceleration):
                 case 1:
                     old_x, old_y = car.path[car.path_index - 1]
                     self.tile_grid[old_y][old_x].occupied[car.prev_direction] = False
                     self.tile_grid[old_y][old_x].occupied_action[car.prev_direction] = None
                     new_x, new_y = car.path[car.path_index]
                     self.tile_grid[new_y][new_x].occupied[car.direction] = True
-                    self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
+                    self.tile_grid[new_y][new_x].occupied_action[car.direction] = car.get_action(car.direction)
 
                 case 2:
                     old_x, old_y = car.path[car.path_index - 1]
@@ -443,7 +477,7 @@ class Map:
                             car.reset(path, False, False)
                             new_x, new_y = car.path[car.path_index]
                             self.tile_grid[new_y][new_x].occupied[car.direction] = True
-                            self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
+                            self.tile_grid[new_y][new_x].occupied_action[car.direction] = car.get_action(car.direction)
                         else:
                             self.add_effect(car.path[0], 1, 2)
                             self.cars_waiting[0].append(car)
@@ -456,7 +490,7 @@ class Map:
                             car.reset(path, True, True)
                             new_x, new_y = car.path[car.path_index]
                             self.tile_grid[new_y][new_x].occupied[car.direction] = True
-                            self.tile_grid[new_y][new_x].occupied[car.direction] = car.get_action(car.direction)
+                            self.tile_grid[new_y][new_x].occupied_action[car.direction] = car.get_action(car.direction)
                         else:
                             self.add_effect(car.path[-1], 1, 2)
                             self.cars_waiting[1].append(car)

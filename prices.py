@@ -11,13 +11,13 @@ class Prices:
         self.upgrades_bought = [0, 0, 0]
 
     def get_road_price(self):
-        return generate_price(15, self.roads_bought, 1.10)
+        return generate_price(15, self.roads_bought, 1.05)
 
     def get_vehicle_price(self):
-        return generate_price(50, self.vehicles_bought)
+        return generate_price(50, self.vehicles_bought, 1.1)
 
     def get_time_price(self):
-        return generate_price(100, self.time_bought, 1.05)
+        return generate_price(100, self.time_bought, 1.1)
 
     def get_land_price(self):
         return generate_price(250, self.land_bought)

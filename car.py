@@ -25,7 +25,6 @@ class Car:
         self.relative_x, self.relative_y = 0, 0
         self.update_relative_position()
 
-
     def reset(self, path, to_hub: bool = False, been_to_factory: bool = False):
         self.driven_percentage = 0.96
 
@@ -63,9 +62,9 @@ class Car:
         deceleration = -(self.speed ** 2) / (2 * dist)
         self.deceleration = deceleration
 
-    def update(self, dt, max_speed):
+    def update(self, dt, max_speed, acceleration):
         if self.state and self.speed < max_speed :
-            self.speed += self.acceleration * dt
+            self.speed += acceleration * dt
         elif not self.state and self.speed > 0 and self.driven_percentage > 0.5:
             self.speed += self.deceleration * dt
 
