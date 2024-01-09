@@ -174,11 +174,15 @@ class Map:
 
                     tile.tile_connections = neighbouring_tiles_pos
 
-    def check_neighbours(self, pos):
+    def check_neighbours(self, pos, moore: bool = False):
         sets = []
         types = []
 
-        neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+        if not moore:
+            neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+        else:
+            neighbours = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]
+
         x, y = pos
         for dx, dy in neighbours:
             nx, ny = x + dx, y + dy
@@ -216,9 +220,9 @@ class Map:
         x_limit_low, x_limit_high = x_dif, self.grid_size_x - x_dif
         y_limit_low, y_limit_high = y_dif, self.grid_size_y - y_dif
 
-        for _ in range(self.stage + 1):
+        for _ in range(int(self.stage * 0.5 + 1)):
             x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
-            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or 2 in self.check_neighbours([x, y])[0] or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
+            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or 2 in self.check_neighbours([x, y])[0] or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
                 x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
 
             self.tile_grid[y][x].tile_set = 2
@@ -389,8 +393,9 @@ class Map:
 
     @staticmethod
     def check_car_doing(tile: Tile, direction: int, action: int = None):
+        direction %= 4
         if tile.occupied[direction]:
-            if tile.occupied_action[direction] == action or tile.occupied_action[direction] is None:
+            if tile.occupied_action[direction] == action or action is None:
                 return True
         return False
 
@@ -403,18 +408,19 @@ class Map:
             if self.tile_grid[pos_y][pos_x].tile_type < 4:
                 return True
             elif self.tile_grid[pos_y][pos_x].tile_type == 4:
-                rotation_diff = (4 - self.tile_grid[pos_y][pos_x].tile_rotation) % 4
-                match car.get_action(1):
+                rotation_diff = self.tile_grid[pos_y][pos_x].tile_rotation
+                match car.get_action(car.get_next_direction(), 1):
                     case 1:  # straight
-                        match car.get_next_direction() - rotation_diff:
+                        match (car.get_next_direction() + rotation_diff) % 4:
                             case 1:  # far side
                                 if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3):
                                     return True
                             case 3:  # close side
-                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff, 3) and self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3) and self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 2)):
+                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff)):
                                     return True
+
                     case 2:  # left
-                        match car.get_next_direction() - rotation_diff:
+                        match (car.get_next_direction() + rotation_diff) % 4:
                             case 0:  # to junction
                                 if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1):
                                     return True
@@ -422,7 +428,7 @@ class Map:
                                 return True
 
                     case 3:  # right
-                        match car.get_next_direction() - rotation_diff:
+                        match (car.get_next_direction() + rotation_diff) % 4:
                             case 0:  # to junction
                                 if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff)):
                                     return True
@@ -449,7 +455,7 @@ class Map:
 
         completed_trips = 0
         for car in self.cars:
-            if self.check_clear(car, car.path[car.path_index + 1]):
+            if self.check_clear(car, car.path[car.path_index + 1]) or car.driven_percentage < 0.5:
                 car.state = 1
             else:
                 car.state = 0

@@ -26,13 +26,13 @@ class Prices:
         return self.get_road_price(), self.get_vehicle_price(), self.get_time_price(), self.get_land_price()
 
     def get_upgrade_0_price(self):
-        return generate_price(200, self.upgrades_bought[0], 3)
+        return generate_price(200, self.upgrades_bought[0], 5)
 
     def get_upgrade_1_price(self):
-        return generate_price(500, self.upgrades_bought[1], 2)
+        return generate_price(500, self.upgrades_bought[1], 4)
 
     def get_upgrade_2_price(self):
-        return generate_price(1000, self.upgrades_bought[2], 2.5)
+        return generate_price(1000, self.upgrades_bought[2], 3)
 
     def get_upgrade_prices(self):
         return self.get_upgrade_0_price(), self.get_upgrade_1_price(), self.get_upgrade_2_price()

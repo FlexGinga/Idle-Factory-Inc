@@ -22,12 +22,12 @@ def game(seed: str):
     num_trucks = 0
     num_roads_available = 0
     time_left = 60
-    money = 2000
+    money = 0
 
     money_per_click = 1
     money_per_truck = 50
     car_speed = 0.6
-    car_acceleration = 0.3
+    car_acceleration = 0.5
 
     total_time = 0
     total_money = 0
@@ -54,6 +54,8 @@ def game(seed: str):
     reset_timer_start = False
     cooldown_timer = 0
     cooldown_timer_start = False
+
+    show_controls = False
 
     dragging = 0
     clicked = 0
@@ -124,6 +126,9 @@ def game(seed: str):
                 if e.key == pygame.K_SPACE:
                     reset_timer_start = True
 
+                if e.key == pygame.K_TAB:
+                    show_controls = True
+
                 if e.key == pygame.K_c:
                     map.reset_offset()
 
@@ -154,6 +159,9 @@ def game(seed: str):
             if e.type == pygame.KEYUP:
                 if e.key == pygame.K_SPACE:
                     reset_timer_start = False
+
+                if e.key == pygame.K_TAB:
+                    show_controls = False
 
         if reset_timer_start:
             reset_timer += dt
@@ -263,7 +271,7 @@ def game(seed: str):
 
         map.draw(build_mode, path)
         hud.draw(seconds_to_time(int(time_left)), money, str(num_roads_available), str(num_trucks),
-                 frame_prices, time_left, upgrades)
+                 frame_prices, time_left, upgrades, show_controls)
 
         pygame.display.flip()
 

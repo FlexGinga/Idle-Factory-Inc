@@ -24,6 +24,8 @@ class Hud:
         self.image_icon_roads = None
         self.image_icon_trucks = None
 
+        self.control_bg = None
+
         self.image_red_haze = None
 
         self.load_images()
@@ -35,6 +37,11 @@ class Hud:
         self.controls = ["Controls:",
                          "MMB - Move",
                          "B - Build Mode"]
+
+        self.recent_fps = []
+        self.average_fps = 0
+        self.high_fps = 0
+        self.low_fps = 0
 
         self.message = None
 
@@ -48,6 +55,8 @@ class Hud:
         self.image_icon_money = pygame.transform.scale(pygame.image.load(path+"icons/money.png").convert_alpha(), (self.icon_size, self.icon_size))
         self.image_icon_roads = pygame.transform.scale(pygame.image.load(path+"icons/roads.png").convert_alpha(), (self.icon_size, self.icon_size))
         self.image_icon_trucks = pygame.transform.scale(pygame.image.load(path+"icons/trucks.png").convert_alpha(), (self.icon_size, self.icon_size))
+
+        self.control_bg = pygame.transform.scale(pygame.image.load(path+"info_screen.png").convert_alpha(), (screen.WIN.get_height() * 0.5, screen.WIN.get_height() * 0.75))
 
         self.image_red_haze = pygame.transform.scale(pygame.image.load(path+"red_haze.png").convert_alpha(), screen.WIN.get_size())
 
@@ -64,6 +73,23 @@ class Hud:
             self.message[1] += dt
             if self.message[1] >= self.message[2]:
                 self.message = None
+
+        self.recent_fps.append(1//dt)
+        if len(self.recent_fps) > 200:
+            self.recent_fps.pop(0)
+
+        self.average_fps = 0
+        self.high_fps = self.recent_fps[0]
+        self.low_fps = self.recent_fps[0]
+        for fps in self.recent_fps:
+            self.average_fps += fps
+
+            if fps < self.low_fps:
+                self.low_fps = fps
+            elif fps > self.high_fps:
+                self.high_fps = fps
+
+        self.average_fps //= len(self.recent_fps)
 
     def check_upgrade_pressed(self, upgrades: list, money, clicked):
         size = self.size_x * 0.75, self.icon_size * 1.5
@@ -101,7 +127,7 @@ class Hud:
         self.message = [message, 0, len_, colour]
 
     def draw(self, time: str = "00:00:00", money: float = 0, roads: str = "0", trucks: str = "0",
-             prices: list = ["", "", "", ""], time_left: float = 10,  upgrades: list = []):
+             prices: list = ["", "", "", ""], time_left: float = 10,  upgrades: list = [], controls: bool = False):
 
         screen.WIN.blit(self.image_upgrade_backing, (screen.WIN.get_width() - self.size_x, 0))
         for i, upgrade in enumerate(upgrades):
@@ -113,7 +139,7 @@ class Hud:
                 screen.WIN.blit(self.image_upgrade_activated, (screen.WIN.get_width() - self.size_x * 7/8, self.size_y * 0.518 + i * self.icon_size * 2))
             else:
                 screen.WIN.blit(self.image_upgrade_deactivated, (screen.WIN.get_width() - self.size_x * 7/8, self.size_y * 0.518 + i * self.icon_size * 2))
-            draw_text(screen.WIN, self.upgrade_font, text, (self.pos[0] + self.size_x // 2, self.size_y * 0.518 + self.icon_size + i * self.icon_size * 2), center_x=True, center_y=True, max_length=int(self.size_x/12))
+            draw_text(screen.WIN, self.upgrade_font, text, (self.pos[0] + self.size_x // 2, self.size_y * 0.518 + self.icon_size + i * self.icon_size * 2), center_x=True, center_y=True, max_length=int(self.size_x/14))
 
         screen.WIN.blit(self.image_background, (screen.WIN.get_width() - self.size_x, 0))
 
@@ -130,10 +156,14 @@ class Hud:
         for button, text, price in zip(self.buttons, self.buttons_text, prices):
             button.draw(text, price)
 
-        draw_text(screen.WIN, self.font, self.controls, (self.pos[0] + self.size_x / 2, self.pos[1] + self.size_y * 0.9), self.text_colour, center_x=True, center_y=True)
+        draw_text(screen.WIN, self.font, ["FPS", "", f"avg - {self.average_fps}", f"high - {self.high_fps}", f"low - {self.low_fps}"], (self.pos[0] + self.size_x / 2, self.pos[1] + self.size_y * 0.9), self.text_colour, center_x=True, center_y=True)
 
         if self.message is not None:
             draw_text(screen.WIN, self.font, [self.message[0]], (screen.WIN.get_width() // 2, screen.WIN.get_height() - 100), self.message[3], center_x=True, center_y=True)
 
         if time_left < 10 and (0.3 > time_left % 1 or 0.7 < time_left % 1):
             screen.WIN.blit(self.image_red_haze, (0, 0))
+
+        if controls:
+            screen.WIN.blit(self.control_bg, (screen.WIN.get_width() // 2 - self.control_bg.get_width() // 2, screen.WIN.get_height() // 2 - self.control_bg.get_height() // 2 ))
+            draw_text(screen.WIN, self.font, self.controls, (screen.WIN.get_width() // 2, screen.WIN.get_height() // 2), center_x=True, center_y=True)
