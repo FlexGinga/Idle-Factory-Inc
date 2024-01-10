@@ -22,7 +22,7 @@ def game(seed: str):
     num_trucks = 0
     num_roads_available = 0
     time_left = 60
-    money = 0
+    money = 50000
 
     money_per_click = 1
     money_per_truck = 50

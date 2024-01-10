@@ -407,34 +407,52 @@ class Map:
         elif not self.tile_grid[pos_y][pos_x].occupied[car.get_next_direction()]:
             if self.tile_grid[pos_y][pos_x].tile_type < 4:
                 return True
-            elif self.tile_grid[pos_y][pos_x].tile_type == 4:
-                rotation_diff = self.tile_grid[pos_y][pos_x].tile_rotation
-                match car.get_action(car.get_next_direction(), 1):
+            # elif self.tile_grid[pos_y][pos_x].tile_type == 4:
+            #     rotation_diff = self.tile_grid[pos_y][pos_x].tile_rotation
+            #     match car.get_action(car.get_next_direction(), 1):
+            #         case 1:  # straight
+            #             match (car.get_next_direction() + rotation_diff) % 4:
+            #                 case 1:  # far side
+            #                     if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3):
+            #                         return True
+            #                 case 3:  # close side
+            #                     if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff)):
+            #                         return True
+            #
+            #         case 2:  # left
+            #             match (car.get_next_direction() + rotation_diff) % 4:
+            #                 case 0:  # to junction
+            #                     if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1):
+            #                         return True
+            #                 case 3:  # close side
+            #                     return True
+            #
+            #         case 3:  # right
+            #             match (car.get_next_direction() + rotation_diff) % 4:
+            #                 case 0:  # to junction
+            #                     if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff)):
+            #                         return True
+            #                 case 1:  # far side
+            #                     if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff)):
+            #                         return True
+
+            elif self.tile_grid[pos_y][pos_x].tile_type == 7 or self.tile_grid[pos_y][pos_x].tile_type == 4:
+                direction = car.get_next_direction()
+                match car.get_action(direction, 1):
                     case 1:  # straight
-                        match (car.get_next_direction() + rotation_diff) % 4:
-                            case 1:  # far side
-                                if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3):
-                                    return True
-                            case 3:  # close side
-                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff)):
-                                    return True
-
+                        if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 + direction) or
+                                self.check_car_doing(self.tile_grid[pos_y][pos_x], 2 + direction, 3) or
+                                self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 3)):
+                            return True
                     case 2:  # left
-                        match (car.get_next_direction() + rotation_diff) % 4:
-                            case 0:  # to junction
-                                if not self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1):
-                                    return True
-                            case 3:  # close side
-                                return True
-
+                        if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 2 + direction, 3) or
+                                self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 3)):
+                            return True
                     case 3:  # right
-                        match (car.get_next_direction() + rotation_diff) % 4:
-                            case 0:  # to junction
-                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 - rotation_diff)):
-                                    return True
-                            case 1:  # far side
-                                if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 0 - rotation_diff, 3) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 - rotation_diff)):
-                                    return True
+                        if not (self.check_car_doing(self.tile_grid[pos_y][pos_x], 1 + direction) or
+                                self.check_car_doing(self.tile_grid[pos_y][pos_x], 2 + direction) or
+                                self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 1) or self.check_car_doing(self.tile_grid[pos_y][pos_x], 3 + direction, 3)):
+                            return True
 
     def update(self, dt, car_speed, car_acceleration, paused: bool = False):
         tile_x, tile_y = self.screen_to_grid(pygame.mouse.get_pos())
