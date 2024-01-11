@@ -153,27 +153,6 @@ class Map:
     def get_stage_size(stage):
         return 9 + stage * 4, 7 + stage * 2
 
-    def build_hub(self):
-        x_dif = (self.grid_size_x - len(HUB_SPAWNS[self.stage][0])) // 2
-        y_dif = (self.grid_size_y - len(HUB_SPAWNS[self.stage])) // 2
-
-        for y, row in enumerate(self.tile_grid[y_dif: self.grid_size_y - y_dif]):
-            for x, tile in enumerate(row[x_dif: self.grid_size_x - x_dif]):
-                self.tile_grid[y + y_dif][x + x_dif] = HUB_SPAWNS[self.stage][y][x]
-
-        for y, row in enumerate(self.tile_grid[y_dif: self.grid_size_y - y_dif]):
-            for x, tile in enumerate(row[x_dif: self.grid_size_x - x_dif]):
-                if tile.tile_set == 1:
-                    neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-                    neighbouring_tiles_pos = []
-
-                    for dx, dy in neighbours:
-                        neighbouring_tiles_pos.append([x + dx, y + dy])
-                        if not (0 <= neighbouring_tiles_pos[-1][1] < self.grid_size_y and 0 <= neighbouring_tiles_pos[-1][0] < self.grid_size_x and self.tile_grid[neighbouring_tiles_pos[-1][1]][neighbouring_tiles_pos[-1][0]].tile_set == 1):
-                            neighbouring_tiles_pos.pop(-1)
-
-                    tile.tile_connections = neighbouring_tiles_pos
-
     def check_neighbours(self, pos, moore: bool = False):
         sets = []
         types = []
@@ -195,21 +174,6 @@ class Map:
 
         return sets, types
 
-    def create_grid(self, stage: int = 0):
-        self.stage = stage
-        self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
-
-        self.tile_grid = [[None for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
-        for y in range(self.grid_size_y):
-            for x in range(self.grid_size_x):
-                self.tile_grid[y][x] = Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False], occupied_action=[None, None, None, None])
-        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = Tile(tile_set=2, tile_type=0, tile_rotation=0, unbreakable=True, connectable=True, occupied=[False, False, False, False], occupied_action=[None, None, None, None])
-
-        self.add_factories()
-
-        self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
-        self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
-
     def add_factories(self):
         start_x, start_y = self.get_stage_size(0)
         self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
@@ -222,15 +186,48 @@ class Map:
 
         for _ in range(int(self.stage * 0.5 + 1)):
             x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
-            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or 2 in self.check_neighbours([x, y])[0] or not (self.tile_grid[y][x].tile_set == 0 and self.tile_grid[y][x].tile_type == 0) or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
+            while (x_limit_low <= x < x_limit_high and y_limit_low <= y < y_limit_high) or 2 in self.check_neighbours([x, y])[0] or not self.tile_grid[y][x].tile_set == 0 or (self.prn.generate()%100/100) > (self.perlin_noise.value_at((self.grid_size_x / 2 - x + 0.5) / self.noise_scale, (self.grid_size_y / 2 - y + 0.5) / self.noise_scale) + 1) / 2:
                 x, y = self.prn.generate() % self.grid_size_x, self.prn.generate() % self.grid_size_y
 
-            self.tile_grid[y][x].tile_set = 2
-            self.tile_grid[y][x].tile_type = 0
-            self.tile_grid[y][x].tile_rotation = 0
-            self.tile_grid[y][x].connectable = 1
-            self.tile_grid[y][x].unbreakable = 1
+            self.tile_grid[y][x] = self.create_tile(2, 0, unbreakable=True)
             self.factories.append([[x, y], 0])
+
+    @staticmethod
+    def create_tile(tile_set: int, tile_type: int, tile_rotation: int = 0, unbreakable: bool = False, connectable: bool = True, occupied: list = None, occupied_action: list = None):
+        if occupied is None:
+            occupied = [False, False, False, False]
+        if occupied_action is None:
+            occupied_action = [None, None, None, None]
+
+        return Tile(tile_set=tile_set, tile_type=tile_type, tile_rotation=tile_rotation, unbreakable=unbreakable,connectable=connectable, occupied=occupied, occupied_action=occupied_action)
+
+
+    def create_grass_tile(self, pos):
+        x, y = pos
+        val = self.perlin_noise.value_at((x - self.grid_size_x // 2) / self.noise_scale,
+                                         (y - self.grid_size_y // 2) / self.noise_scale)
+        val = clamp((val + 1) / 2 * 7, 0, 7)
+        val = int(val)
+
+        return self.create_tile(0, val, connectable=False)
+
+    def fill_grass(self):
+        self.tile_grid = [[None for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
+        for y in range(self.grid_size_y):
+            for x in range(self.grid_size_x):
+                self.tile_grid[y][x] = self.create_grass_tile((x, y))
+
+    def create_grid(self, stage: int = 0):
+        self.stage = stage
+        self.grid_size_x, self.grid_size_y = self.get_stage_size(self.stage)
+
+        self.fill_grass()
+        self.tile_grid[self.grid_size_y//2][self.grid_size_x//2] = self.create_tile(2, 0, unbreakable=True)
+
+        self.add_factories()
+
+        self.offset_constant_x = self.scaled_tile_size * self.grid_size_x // 2
+        self.offset_constant_y = self.scaled_tile_size * self.grid_size_y // 2
 
     def expand_grid(self):
         self.stage += 1
@@ -241,10 +238,12 @@ class Map:
         y_dif = (self.grid_size_y - old_y) // 2
 
         old = self.tile_grid
-        self.tile_grid = [[Tile(tile_set=0, tile_type=0, tile_rotation=0, occupied=[False, False, False, False], occupied_action=[None, None, None, None]) for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
+        self.fill_grass()
+
         for y, row in enumerate(old):
             for x, tile in enumerate(row):
-                self.tile_grid[y + y_dif][x + x_dif] = tile
+                if tile.tile_set != 0:
+                    self.tile_grid[y + y_dif][x + x_dif] = tile
 
         for effect in self.effects:
             effect.pos = effect.pos[0] + x_dif, effect.pos[1] + y_dif
@@ -322,30 +321,28 @@ class Map:
         if self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set == 1:
             match num_connections:
                 case 0:
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 0
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = 0
+                    chosen_type = 0
+                    chosen_rotation = 0
                 case 1:
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 1
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = 3 - neighbours_road.index(1)
+                    chosen_type = 1
+                    chosen_rotation = 3 - neighbours_road.index(1)
                 case 2:
                     if neighbours_road in [[0, 1, 0, 1], [1, 0, 1, 0]]:
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 2
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = [[0, 1, 0, 1], [1, 0, 1, 0]].index(neighbours_road)
+                        chosen_type = 2
+                        chosen_rotation = [[0, 1, 0, 1], [1, 0, 1, 0]].index(neighbours_road)
                     else:
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 3
-                        self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = [[0, 0, 1, 1], [0, 1, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1]].index(neighbours_road)
+                        chosen_type = 3
+                        chosen_rotation = [[0, 0, 1, 1], [0, 1, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1]].index(neighbours_road)
                 case 3:
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 4
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = [[0, 1, 1, 1], [1, 1, 1, 0], [1, 1, 0, 1], [1, 0, 1, 1]].index(neighbours_road)
+                    chosen_type = 4
+                    chosen_rotation = [[0, 1, 1, 1], [1, 1, 1, 0], [1, 1, 0, 1], [1, 0, 1, 1]].index(neighbours_road)
                 case 4:
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set = 1
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type = 7
-                    self.tile_grid[tile_pos[1]][tile_pos[0]].tile_rotation = 0
+                    chosen_type = 7
+                    chosen_rotation = 0
+
+            occupied = self.tile_grid[tile_pos[1]][tile_pos[0]].occupied
+            occupied_action = self.tile_grid[tile_pos[1]][tile_pos[0]].occupied_action
+            self.tile_grid[tile_pos[1]][tile_pos[0]] = self.create_tile(1, chosen_type, chosen_rotation, occupied=occupied, occupied_action=occupied_action)
 
         if center or old_type != self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type:
             for pos in neighbouring_tiles_pos:
@@ -360,18 +357,15 @@ class Map:
 
     def on_click(self, del_: bool = False):
         if self.hover_tile_pos is not None:
-            tile = self.tile_grid[self.hover_tile_pos[1]][self.hover_tile_pos[0]]
+            x, y = self.hover_tile_pos
+            tile = self.tile_grid[y][x]
             if not tile.unbreakable:
                 if del_ and tile.tile_set == 1 and not self.check_tile_use(self.hover_tile_pos):
-                    tile.tile_set = 0
-                    tile.tile_type = 0
-                    tile.tile_rotation = 0
-                    tile.connectable = False
+                    self.tile_grid[y][x] = self.create_grass_tile(self.hover_tile_pos)
                     self.decide_tile_type(self.hover_tile_pos, True)
                     return True
                 elif not del_ and tile.tile_set != 1:
-                    tile.tile_set = 1
-                    tile.connectable = True
+                    self.tile_grid[y][x] = self.create_tile(1, 0)
                     self.decide_tile_type(self.hover_tile_pos, True)
                     return True
 
