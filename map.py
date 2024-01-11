@@ -206,7 +206,7 @@ class Map:
         x, y = pos
         val = self.perlin_noise.value_at((x - self.grid_size_x // 2) / self.noise_scale,
                                          (y - self.grid_size_y // 2) / self.noise_scale)
-        val = clamp((val + 1) / 2 * 7, 0, 7)
+        val = clamp((val + 1) / 2 * 9, 0, 7)
         val = int(val)
 
         return self.create_tile(0, val, connectable=False)
