@@ -96,7 +96,6 @@ class Map:
 
         self.image_build_mode = pygame.transform.scale(pygame.image.load("assets/map/build_mode_icon.png").convert_alpha(), (48,32))
 
-
     def scale_images(self):
         size = (self.scaled_tile_size, self.scaled_tile_size)
         for i, image_set in enumerate(self.images):
@@ -193,13 +192,13 @@ class Map:
             self.factories.append([[x, y], 0])
 
     @staticmethod
-    def create_tile(tile_set: int, tile_type: int, tile_rotation: int = 0, unbreakable: bool = False, connectable: bool = True, occupied: list = None, occupied_action: list = None):
+    def create_tile(tile_set: int, tile_type: int, tile_rotation: int = 0, unbreakable: bool = False, connectable: bool = True,connections: list = (), occupied: list = None, occupied_action: list = None):
         if occupied is None:
             occupied = [False, False, False, False]
         if occupied_action is None:
             occupied_action = [None, None, None, None]
 
-        return Tile(tile_set=tile_set, tile_type=tile_type, tile_rotation=tile_rotation, unbreakable=unbreakable,connectable=connectable, occupied=occupied, occupied_action=occupied_action)
+        return Tile(tile_set=tile_set, tile_type=tile_type, tile_rotation=tile_rotation, unbreakable=unbreakable, connectable=connectable, tile_connections=connections, occupied=occupied, occupied_action=occupied_action)
 
 
     def create_grass_tile(self, pos):
@@ -275,7 +274,9 @@ class Map:
     def find_least_populated_factory(self):
         acceptable = False
         smallest_index = -1
+        print(self.factories)
         for i, factory in enumerate(self.factories):
+            print(AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], factory[0], self.prn))
             if (factory[1] < self.factories[smallest_index][1] or smallest_index == -1) and factory[1] < 5 and AStar.find_path(self.tile_grid, [self.grid_size_x // 2, self.grid_size_y // 2], factory[0], self.prn) != []:
                 acceptable = True
                 smallest_index = i
@@ -316,6 +317,7 @@ class Map:
         neighbouring_tiles_pos,neighbours_road, num_connections = self.get_tile_neighbours(tile_pos)
 
         self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections = neighbouring_tiles_pos
+        print(self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections)
 
         old_type = self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type
         if self.tile_grid[tile_pos[1]][tile_pos[0]].tile_set == 1:
@@ -342,7 +344,8 @@ class Map:
 
             occupied = self.tile_grid[tile_pos[1]][tile_pos[0]].occupied
             occupied_action = self.tile_grid[tile_pos[1]][tile_pos[0]].occupied_action
-            self.tile_grid[tile_pos[1]][tile_pos[0]] = self.create_tile(1, chosen_type, chosen_rotation, occupied=occupied, occupied_action=occupied_action)
+            tile_connections = self.tile_grid[tile_pos[1]][tile_pos[0]].tile_connections
+            self.tile_grid[tile_pos[1]][tile_pos[0]] = self.create_tile(1, chosen_type, chosen_rotation, connections=tile_connections, occupied=occupied, occupied_action=occupied_action)
 
         if center or old_type != self.tile_grid[tile_pos[1]][tile_pos[0]].tile_type:
             for pos in neighbouring_tiles_pos:
@@ -377,8 +380,7 @@ class Map:
         for car in self.cars:
             if car.path_index != 0:
                 x, y = car.path[car.path_index]
-                self.tile_grid[y][x].occupied[car.prev_direction] = False
-                self.tile_grid[y][x].occupied_action[car.prev_direction] = None
+                self.tile_grid[y][x].reset_occupation()
 
             if not car.to_hub:
                 car.path = [car.path[-1], car.path[0]]

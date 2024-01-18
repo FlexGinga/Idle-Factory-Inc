@@ -13,3 +13,7 @@ class Tile:
 
     unbreakable: bool = False
     connectable: bool = False
+
+    def reset_occupation(self):
+        self.occupied = [False, False, False, False]
+        self.occupied_action = [None, None, None, None]
